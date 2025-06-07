@@ -57,9 +57,6 @@ const CreateCampaign = () => {
       }
 
       const user = getCurrentUser();
-      console.log('Current user:', user);
-      console.log('Local storage user:', localStorage.getItem('user'));
-      
       if (!user) {
         throw new Error('You must be logged in to create a campaign');
       }
@@ -85,11 +82,26 @@ const CreateCampaign = () => {
       const campaign = await createCampaign(campaignData);
       console.log('Campaign created successfully:', campaign);
 
+      // Show success message before redirecting
+      // You might want to add a toast notification system here
+      setError(null);
+      
       // Redirect to campaigns page after successful creation
       navigate('/campaigns');
     } catch (err) {
       console.error('Error creating campaign:', err);
-      setError(err instanceof Error ? err.message : 'Failed to create campaign');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create campaign';
+      
+      // Handle specific error cases
+      if (errorMessage.includes('Crossmark extension not found')) {
+        setError('Please install the Crossmark extension to create campaigns. The campaign will be saved locally for now.');
+      } else if (errorMessage.includes('cancelled')) {
+        setError('Campaign creation was cancelled. Please try again.');
+      } else if (errorMessage.includes('created locally')) {
+        setError('Campaign was created locally but could not be stored on-chain. Some features may be limited.');
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }

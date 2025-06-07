@@ -109,9 +109,12 @@ export const getCampaigns = async (): Promise<Campaign[]> => {
 
 // Helper function to convert string to hex
 const stringToHex = (str: string): string => {
-  return Array.from(str)
-    .map(c => c.charCodeAt(0).toString(16).padStart(2, '0'))
-    .join('');
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(str);
+  return Array.from(bytes)
+    .map(byte => byte.toString(16).padStart(2, '0'))
+    .join('')
+    .toUpperCase();
 };
 
 export const createCampaign = async (campaignData: Omit<Campaign, 'id' | 'createdAt' | 'status' | 'currentAmount'>): Promise<Campaign> => {
@@ -138,66 +141,69 @@ export const createCampaign = async (campaignData: Omit<Campaign, 'id' | 'create
     console.log('Preparing campaign metadata...');
     
     // First, check if Crossmark is available
-    if (!window.crossmark) {
-      throw new Error('Crossmark extension not found');
+    if (typeof window === 'undefined' || !window.crossmark) {
+      throw new Error('Crossmark extension not found. Please install Crossmark and try again.');
     }
 
-    const metadata: CampaignMetadata = {
-      id: campaign.id,
-      organizationAddress: address,
+    // Create the metadata object according to XRPL memo format
+    const memoData = {
+      type: 'campaign_creation',
+      campaign_id: campaign.id,
+      organization_address: address,
       title: campaign.title,
       description: campaign.description,
-      targetAmount: campaign.targetAmount,
-      currentAmount: campaign.currentAmount,
-      endDate: campaign.endDate,
+      target_amount: campaign.targetAmount.toString(),
+      end_date: campaign.endDate,
       category: campaign.category,
-      status: campaign.status
+      status: campaign.status,
+      created_at: campaign.createdAt
     };
 
-    // Convert to hex and check size limit
-    const metadataJson = JSON.stringify(metadata);
-    const metadataHex = stringToHex(metadataJson).toUpperCase();
+    // Convert JSON object to hex string
+    const memoJson = JSON.stringify(memoData);
+    const memoHex = stringToHex(memoJson);
     
-    console.log('Metadata size:', metadataHex.length / 2, 'bytes');
-    console.log('Metadata hex:', metadataHex);
+    console.log('Metadata size:', memoHex.length / 2, 'bytes');
+    console.log('Metadata hex:', memoHex);
     
-    if (metadataHex.length > 2048) { // 1024 bytes = 2048 hex characters (Memo limit)
+    if (memoHex.length > 2048) {
       throw new Error('Metadata exceeds 1024 byte Memo limit');
     }
+
+    // Create the Memo field according to XRPL format
+    const memo = {
+      Memo: {
+        MemoData: memoHex,
+        MemoFormat: stringToHex('text/plain'),
+        MemoType: stringToHex('campaign_creation')
+      }
+    };
 
     // Prepare Payment transaction with Memo
     const transaction = {
       TransactionType: 'Payment',
       Account: address,
-      Destination: address, // self-payment
-      Amount: '1', // 1 drop
-      Fee: '12',
-      Flags: 0,
-      Memos: [
-        {
-          Memo: {
-            MemoType: stringToHex('Campaign').toUpperCase(),
-            MemoData: metadataHex,
-          }
-        }
-      ]
+      Destination: 'rDUwA8yoYYE2cnBkPEh2qDcRvLx8hybLh1', // Specified destination wallet
+      Amount: '1', // Minimum amount for memo transaction
+      Memos: [memo]
     };
 
     console.log('Submitting transaction:', transaction);
     
-    // Sign and submit the transaction
+    // Sign and submit the transaction using Crossmark
     const response = await window.crossmark.methods.signAndSubmit(transaction);
     console.log('Transaction response:', response);
     
-    // Check if transaction was successful
-    if (response && response.response && response.response.result) {
-      const result = response.response.result;
-      if (result.meta && result.meta.TransactionResult !== 'tesSUCCESS') {
-        throw new Error(`Transaction failed: ${result.meta.TransactionResult}`);
+    // Handle the response
+    if (!response) {
+      throw new Error('No response received from Crossmark');
+    }
+
+    if (response.error) {
+      if (response.error === 'cancelled') {
+        throw new Error('cancelled');
       }
-      console.log('Transaction successful:', result.hash);
-    } else {
-      throw new Error('Invalid response from Crossmark');
+      throw new Error(response.error);
     }
 
     // Store campaign in local storage
@@ -208,6 +214,10 @@ export const createCampaign = async (campaignData: Omit<Campaign, 'id' | 'create
     return campaign;
   } catch (error) {
     console.error('Error storing campaign metadata:', error);
+    
+    if (error instanceof Error && error.message === 'cancelled') {
+      throw new Error('Campaign creation was cancelled by user');
+    }
     
     // Still create campaign locally even if on-chain storage fails
     const campaigns = await getCampaigns();

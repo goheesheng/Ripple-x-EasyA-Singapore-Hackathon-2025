@@ -19,10 +19,24 @@ async function main() {
     // Create charity and donor test wallets
     const charityWallet = await walletManager.createFundedTestWallet();
     const donorWallet = await walletManager.createFundedTestWallet();
+    const issuerWallet = walletManager.getIssuerWallet();
     
-    console.log('\nCreated test wallets:');
-    console.log('Charity wallet address:', charityWallet.address);
-    console.log('Donor wallet address:', donorWallet.address);
+    if (!issuerWallet) {
+      throw new Error('Failed to get issuer wallet');
+    }
+    
+    console.log('\nWallet Information:');
+    console.log('=== RLUSD Issuer Wallet ===');
+    console.log('Address:', issuerWallet.address);
+    console.log('Secret/Seed:', issuerWallet.seed);
+    
+    console.log('\n=== Charity Wallet ===');
+    console.log('Address:', charityWallet.address);
+    console.log('Secret/Seed:', charityWallet.seed);
+    
+    console.log('\n=== Donor Wallet ===');
+    console.log('Address:', donorWallet.address);
+    console.log('Secret/Seed:', donorWallet.seed);
 
     // Set up RLUSD trust lines
     console.log('\nSetting up trust lines...');
@@ -45,6 +59,8 @@ async function main() {
     console.log('- Name:', campaign.name);
     console.log('- Target:', campaign.targetAmount, 'RLUSD');
     console.log('- Status:', campaign.status);
+    console.log('- Charity Wallet:', campaign.charityWallet.address);
+    console.log('- Charity Secret:', campaign.charityWallet.seed);
 
     // Subscribe to campaign updates
     console.log('\nSubscribing to campaign updates...');
@@ -72,6 +88,8 @@ async function main() {
       console.log('- Campaign:', c.name);
       console.log('  Status:', c.status);
       console.log('  Progress:', c.currentAmount + '/' + c.targetAmount, 'RLUSD');
+      console.log('  Charity Address:', c.charityWallet.address);
+      console.log('  Charity Secret:', c.charityWallet.seed);
     });
 
     // Clean up
