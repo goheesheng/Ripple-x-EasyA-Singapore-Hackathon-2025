@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Calendar, Users } from 'lucide-react';
 import DonationModal from './DonationModal';
 import { getCurrentUser, isOrganization } from '../services/auth';
-import { Campaign, getCampaigns, getCampaignsByOrganization, getCampaignsByDonor, updateCampaignAmount } from '../services/campaigns';
+import { Campaign, getCampaigns, getCampaignsByOrganization, getCampaignsByDonor, updateCampaignAmount, getCampaignById } from '../services/campaigns';
 import { User } from '../types/index';
 
 interface CampaignListProps {
@@ -44,9 +44,33 @@ export default function CampaignList({ showOnlyMyCampaigns, showOnlyMyDonations 
     loadCampaigns();
   }, [showOnlyMyCampaigns, showOnlyMyDonations]);
 
-  const handleDonateClick = (campaign: Campaign) => {
-    setSelectedCampaign(campaign);
-    setIsDonationModalOpen(true);
+  const handleDonateClick = async (campaign: Campaign) => {
+    try {
+      // Fetch the complete campaign details including wallet address
+      const fullCampaign = await getCampaignById(campaign.id);
+      
+      if (!fullCampaign) {
+        setError('Campaign not found');
+        return;
+      }
+      
+      if (!fullCampaign.campaignWalletAddress) {
+        setError('Campaign wallet address not found. This campaign may not be properly configured for donations.');
+        return;
+      }
+      
+      console.log('📋 Campaign details for donation:', {
+        id: fullCampaign.id,
+        title: fullCampaign.title,
+        walletAddress: fullCampaign.campaignWalletAddress
+      });
+      
+      setSelectedCampaign(fullCampaign);
+      setIsDonationModalOpen(true);
+    } catch (err) {
+      console.error('Failed to load campaign details:', err);
+      setError('Failed to load campaign details. Please try again.');
+    }
   };
 
   const handleDonationModalClose = () => {

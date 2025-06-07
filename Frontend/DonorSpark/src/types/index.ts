@@ -33,6 +33,7 @@ export interface Campaign {
   organizationId: string;
   organizationName: string;
   organizationDescription?: string;
+  organizationWebsite?: string;
   image?: string;
   status: 'active' | 'completed' | 'cancelled';
   createdAt: string;

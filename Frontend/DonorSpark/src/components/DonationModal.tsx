@@ -1,17 +1,14 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle } from 'lucide-react';
+import { processDonation } from '../services/donations';
+import { getCurrentUser } from '../services/auth';
+import { Campaign } from '../types';
 
 interface DonationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  campaign: {
-    id: string;
-    title: string;
-    organization: {
-      name: string;
-    };
-  };
+  campaign: Campaign;
   onDonationSuccess?: (amount: number) => void;
 }
 
@@ -26,26 +23,64 @@ export default function DonationModal({ isOpen, onClose, campaign, onDonationSuc
       setIsProcessing(true);
       setError(null);
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Show success state
-      setIsSuccess(true);
-      
-      // Update campaign amount
-      if (onDonationSuccess) {
-        onDonationSuccess(parseFloat(amount));
+      // Validate amount
+      const donationAmount = parseFloat(amount);
+      if (donationAmount <= 0) {
+        throw new Error('Please enter a valid donation amount');
+      }
+
+      // Get current user (donor)
+      const currentUser = getCurrentUser();
+      if (!currentUser) {
+        throw new Error('Please log in to make a donation');
+      }
+
+      // Check if campaign has wallet address
+      if (!campaign.campaignWalletAddress) {
+        throw new Error('Campaign wallet address not found. Please contact support.');
+      }
+
+      console.log('💰 Starting donation process...', {
+        campaignId: campaign.id,
+        campaignWallet: campaign.campaignWalletAddress,
+        amount: donationAmount,
+        donor: currentUser.id
+      });
+
+      // Process donation through XRPL
+      const result = await processDonation(
+        campaign.id,
+        campaign.campaignWalletAddress,
+        donationAmount,
+        currentUser.id // donor address
+      );
+
+      if (result.success) {
+        console.log('✅ Donation successful!', result);
+        
+        // Show success state
+        setIsSuccess(true);
+        
+        // Update campaign amount in parent component
+        if (onDonationSuccess) {
+          onDonationSuccess(donationAmount);
+        }
+        
+        // Close modal after 3 seconds
+        setTimeout(() => {
+          onClose();
+          setIsSuccess(false);
+          setAmount('');
+        }, 3000);
+        
+      } else {
+        throw new Error(result.message);
       }
       
-      // Close modal after 2 seconds
-      setTimeout(() => {
-        onClose();
-        setIsSuccess(false);
-        setAmount('');
-      }, 2000);
-      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred while processing your donation');
+      console.error('❌ Donation failed:', err);
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred while processing your donation';
+      setError(errorMessage);
     } finally {
       setIsProcessing(false);
     }
@@ -70,7 +105,7 @@ export default function DonationModal({ isOpen, onClose, campaign, onDonationSuc
               <div>
                 <h3 className="text-xl font-bold text-gray-800">Make a Donation</h3>
                 <p className="text-gray-600 mt-1">
-                  Supporting {campaign.organization.name}'s "{campaign.title}" campaign
+                  Supporting {campaign.organizationName}'s "{campaign.title}" campaign
                 </p>
               </div>
               <button
@@ -90,7 +125,7 @@ export default function DonationModal({ isOpen, onClose, campaign, onDonationSuc
                 <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
                 <h4 className="text-xl font-bold text-gray-800 mb-2">Thank You!</h4>
                 <p className="text-gray-600">
-                  Your donation of {amount} XRP has been processed successfully.
+                  Your donation of {amount} XRP has been processed successfully and validated on the XRPL blockchain!
                 </p>
               </motion.div>
             ) : (

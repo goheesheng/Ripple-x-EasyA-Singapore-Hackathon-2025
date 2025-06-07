@@ -2,17 +2,18 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { User, Calendar, Download, DollarSign, Target } from 'lucide-react';
 import { getCurrentUser } from '../services/auth';
-import { getCampaignsByDonor } from '../services/campaigns';
-import { Donation } from '../types';
+import { getDonorDonations, Donation } from '../services/donations';
 
 interface DonationSummary {
   totalAmount: number;
   campaignCount: number;
   donations: Array<{
     campaignTitle: string;
+    organizationName: string;
     amount: number;
     date: string;
     campaignId: string;
+    txHash: string;
   }>;
 }
 
@@ -50,31 +51,26 @@ const AccountSummary = () => {
         throw new Error('Please login as a donor to view your donation summary');
       }
 
-      // Get all campaigns the user has donated to
-      const campaigns = await getCampaignsByDonor(user.id);
+      // Get donations from database
+      const allDonations = await getDonorDonations(user.id);
       
-      // Get donations from localStorage (in a real app, this would come from your backend)
-      const donationsStr = localStorage.getItem('donations') || '[]';
-      const allDonations: Donation[] = JSON.parse(donationsStr);
-      
-      // Filter donations for the current user and selected year
+      // Filter donations for the selected year
       const userDonations = allDonations.filter(donation => {
         const donationYear = new Date(donation.createdAt).getFullYear();
-        return donation.donorId === user.id && donationYear === year;
+        return donationYear === year;
       });
 
       // Create summary
       const donationSummary: DonationSummary = {
         totalAmount: userDonations.reduce((sum, donation) => sum + donation.amount, 0),
         campaignCount: new Set(userDonations.map(d => d.campaignId)).size,
-        donations: await Promise.all(userDonations.map(async donation => {
-          const campaign = campaigns.find(c => c.id === donation.campaignId);
-          return {
-            campaignTitle: campaign?.title || 'Unknown Campaign',
-            amount: donation.amount,
-            date: donation.createdAt,
-            campaignId: donation.campaignId
-          };
+        donations: userDonations.map(donation => ({
+          campaignTitle: donation.campaignTitle || 'Unknown Campaign',
+          organizationName: donation.organizationName || 'Unknown Organization',
+          amount: donation.amount,
+          date: donation.createdAt,
+          campaignId: donation.campaignId,
+          txHash: donation.txHash
         }))
       };
 

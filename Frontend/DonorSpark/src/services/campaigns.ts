@@ -1,21 +1,47 @@
 import { Campaign } from '../types';
 import { Client, Wallet } from 'xrpl';
 
-// Only import database on server-side (when not in browser)
-let storeCampaignTransaction: ((campaignId: string, txHash: string) => Promise<void>) | null = null;
+// Browser-side database operations via API calls
+// Store campaign in MySQL database
+const storeCampaignInDatabase = async (campaign: Campaign): Promise<void> => {
+  try {
+    const response = await fetch('http://localhost:3001/api/campaigns', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        id: campaign.id,
+        title: campaign.title,
+        description: campaign.description,
+        targetAmount: campaign.targetAmount,
+        endDate: campaign.endDate,
+        category: campaign.category,
+        organizationId: campaign.organizationId,
+        organizationName: campaign.organizationName,
+        organizationDescription: campaign.organizationDescription,
+        organizationWebsite: campaign.organizationWebsite,
+        imageUrl: campaign.image,
+        campaignWalletAddress: campaign.campaignWalletAddress
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    console.log('Campaign stored in database:', result);
+    
+  } catch (error) {
+    console.error('Failed to store campaign in database:', error);
+    throw error;
+  }
+};
 
-// Dynamically import database functions only on server-side
-if (typeof window === 'undefined') {
-  // This will only run on server-side
-  import('./database').then(db => {
-    storeCampaignTransaction = db.storeCampaignTransaction;
-  }).catch(() => {
-    console.log('Database not available in browser environment');
-  });
-}
-
-// Alternative: Create an API call function for browser-side database operations
-const storeCampaignToDatabase = async (campaignId: string, txHash: string): Promise<void> => {
+// Store campaign transaction in MySQL database - ONLY called after blockchain confirmation
+const storeCampaignTransaction = async (campaignId: string, txHash: string): Promise<void> => {
   try {
     // Make API call to backend server
     const response = await fetch('http://localhost:3001/api/campaigns/transactions', {
@@ -133,13 +159,51 @@ const sampleCampaigns: Campaign[] = [
 ];
 
 export const getCampaigns = async (): Promise<Campaign[]> => {
-  const campaigns = localStorage.getItem(STORAGE_KEY);
-  if (!campaigns) {
-    // Initialize with sample campaigns
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleCampaigns));
+  try {
+    const response = await fetch('http://localhost:3001/api/campaigns');
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    return data.campaigns || [];
+  } catch (error) {
+    console.error('Failed to fetch campaigns from database:', error);
+    
+    // Fallback to localStorage if API fails
+    const campaigns = localStorage.getItem(STORAGE_KEY);
+    if (campaigns) {
+      return JSON.parse(campaigns);
+    }
+    
+    // Last resort: return sample campaigns
     return sampleCampaigns;
   }
-  return JSON.parse(campaigns);
+};
+
+export const getCampaignById = async (campaignId: string): Promise<Campaign | null> => {
+  try {
+    const response = await fetch(`http://localhost:3001/api/campaigns/${campaignId}`);
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    return data.campaign || null;
+  } catch (error) {
+    console.error('Failed to fetch campaign from database:', error);
+    
+    // Fallback to localStorage
+    const campaigns = localStorage.getItem(STORAGE_KEY);
+    if (campaigns) {
+      const parsedCampaigns: Campaign[] = JSON.parse(campaigns);
+      return parsedCampaigns.find(c => c.id === campaignId) || null;
+    }
+    
+    // Fallback to sample campaigns
+    return sampleCampaigns.find(c => c.id === campaignId) || null;
+  }
 };
 
 // Helper function to convert string to hex
@@ -358,48 +422,62 @@ export const createCampaign = async (campaignData: Omit<Campaign, 'id' | 'create
       throw new Error(response.error);
     }
 
-    // Wait for transaction validation on ledger before storing in database
+    // CRITICAL: Only store in database AFTER transaction is mined and validated
     if (response.result && response.result.hash) {
-      console.log('✅ Transaction submitted with hash:', response.result.hash);
-      console.log('⏳ Waiting for transaction validation on XRPL ledger...');
-      console.log('🔍 This may take 10-30 seconds for the transaction to be mined and validated...');
+      const txHash = response.result.hash;
+      console.log('📤 Transaction submitted to XRPL with hash:', txHash);
+      console.log('⏳ Waiting for transaction to be MINED and VALIDATED on ledger...');
+      console.log('🔍 This process ensures data integrity - we only store in MySQL after blockchain confirmation');
       
       try {
-        // Wait for transaction to be validated on ledger
-        const validatedTransaction = await waitForTransactionValidation(response.result.hash);
+        // STEP 1: Wait for transaction to be mined and validated on XRPL ledger
+        console.log('🔗 Polling XRPL ledger for transaction confirmation...');
+        const validatedTransaction = await waitForTransactionValidation(txHash);
         
         if (validatedTransaction.validated) {
-          console.log('✅ Transaction validated on ledger!');
-          console.log('💾 Storing campaign and transaction hash in database...');
+          console.log('✅ SUCCESS: Transaction has been MINED and VALIDATED on XRPL ledger!');
+          console.log('📊 Ledger Index:', validatedTransaction.transaction.ledger_index);
+          console.log('🔗 Transaction Hash:', validatedTransaction.transaction.hash);
           
-          // Now store in database since transaction is confirmed
-          await storeCampaignToDatabase(campaign.id, response.result.hash);
-          console.log('✅ Campaign and transaction hash successfully stored in database');
+          // STEP 2: NOW it's safe to store in MySQL database
+          console.log('💾 Now storing campaign + transaction hash in MySQL database...');
+          await storeCampaignTransaction(campaign.id, txHash);
+          console.log('✅ SUCCESS: Campaign and validated transaction hash stored in database');
+          
         } else {
-          throw new Error('Transaction failed validation on ledger');
+          throw new Error('Transaction failed validation - not storing in database');
         }
       } catch (validationError) {
-        console.error('❌ Transaction validation failed:', validationError);
+        console.error('❌ FAILED: Transaction validation failed:', validationError);
+        console.log('⚠️  Campaign will be stored locally only (no database storage)');
         
-        // If validation fails, still store locally but don't store in MySQL
-        console.log('⚠️  Storing campaign locally without database confirmation');
-        throw new Error(`Transaction validation failed: ${validationError.message}`);
+        // Don't store in MySQL if transaction validation fails
+        const errorMessage = validationError instanceof Error ? validationError.message : 'Unknown validation error';
+        throw new Error(`Blockchain validation failed: ${errorMessage}`);
       }
+    } else {
+      throw new Error('No transaction hash received from Crossmark');
     }
 
-    // Store campaign and wallet info in local storage
-    const campaigns = await getCampaigns();
+    // Store campaign in MySQL database
+    try {
+      await storeCampaignInDatabase(campaign);
+      console.log('✅ Campaign stored in database successfully');
+    } catch (dbError) {
+      console.error('Failed to store campaign in database:', dbError);
+      // Fall back to localStorage
+      const campaigns = await getCampaigns();
+      campaigns.push(campaign);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(campaigns));
+    }
     
-    // Store wallet seed securely
+    // Store wallet seed securely in localStorage (sensitive data)
     const campaignWallets = JSON.parse(localStorage.getItem('campaign_wallets') || '{}');
     campaignWallets[campaign.id] = {
       address: campaignWallet.address,
       seed: campaignWallet.seed
     };
     localStorage.setItem('campaign_wallets', JSON.stringify(campaignWallets));
-    
-    campaigns.push(campaign);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(campaigns));
 
     return campaign;
   } catch (error) {
@@ -410,7 +488,16 @@ export const createCampaign = async (campaignData: Omit<Campaign, 'id' | 'create
     }
     
     // Still create campaign locally even if on-chain storage fails
-    const campaigns = await getCampaigns();
+    try {
+      await storeCampaignInDatabase(campaign);
+      console.log('✅ Campaign stored in database (without blockchain confirmation)');
+    } catch (dbError) {
+      console.error('Failed to store campaign in database:', dbError);
+      // Fall back to localStorage only
+      const campaigns = await getCampaigns();
+      campaigns.push(campaign);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(campaigns));
+    }
     
     // Store wallet info even if transaction fails
     const campaignWallets = JSON.parse(localStorage.getItem('campaign_wallets') || '{}');
@@ -420,9 +507,6 @@ export const createCampaign = async (campaignData: Omit<Campaign, 'id' | 'create
     };
     localStorage.setItem('campaign_wallets', JSON.stringify(campaignWallets));
     
-    campaigns.push(campaign);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(campaigns));
-    
     if (error instanceof Error) {
       throw new Error(`Campaign created locally but on-chain storage failed: ${error.message}`);
     }
@@ -431,8 +515,20 @@ export const createCampaign = async (campaignData: Omit<Campaign, 'id' | 'create
 };
 
 export const getCampaignsByOrganization = async (organizationId: string): Promise<Campaign[]> => {
-  const campaigns = await getCampaigns();
-  return campaigns.filter(campaign => campaign.organizationId === organizationId);
+  try {
+    const response = await fetch(`http://localhost:3001/api/campaigns/organization/${organizationId}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    return data.campaigns || [];
+  } catch (error) {
+    console.error('Failed to fetch organization campaigns from database:', error);
+    
+    // Fallback to localStorage filtering
+    const campaigns = await getCampaigns();
+    return campaigns.filter(campaign => campaign.organizationId === organizationId);
+  }
 };
 
 export const getCampaignsByDonor = async (): Promise<Campaign[]> => {
@@ -441,20 +537,49 @@ export const getCampaignsByDonor = async (): Promise<Campaign[]> => {
 };
 
 export const updateCampaignAmount = async (campaignId: string, amount: number): Promise<Campaign> => {
-  const campaigns = await getCampaigns();
-  const campaignIndex = campaigns.findIndex(c => c.id === campaignId);
-  
-  if (campaignIndex === -1) {
-    throw new Error('Campaign not found');
+  try {
+    // Update amount in database
+    const response = await fetch(`http://localhost:3001/api/campaigns/${campaignId}/amount`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ amount })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    // Get updated campaign
+    const campaignResponse = await fetch(`http://localhost:3001/api/campaigns/${campaignId}`);
+    if (!campaignResponse.ok) {
+      throw new Error(`HTTP error! status: ${campaignResponse.status}`);
+    }
+    
+    const data = await campaignResponse.json();
+    return data.campaign;
+    
+  } catch (error) {
+    console.error('Failed to update campaign amount in database:', error);
+    
+    // Fallback to localStorage
+    const campaigns = await getCampaigns();
+    const campaignIndex = campaigns.findIndex(c => c.id === campaignId);
+    
+    if (campaignIndex === -1) {
+      throw new Error('Campaign not found');
+    }
+
+    const updatedCampaign = {
+      ...campaigns[campaignIndex],
+      currentAmount: campaigns[campaignIndex].currentAmount + amount
+    };
+
+    campaigns[campaignIndex] = updatedCampaign;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(campaigns));
+
+    return updatedCampaign;
   }
-
-  const updatedCampaign = {
-    ...campaigns[campaignIndex],
-    currentAmount: campaigns[campaignIndex].currentAmount + amount
-  };
-
-  campaigns[campaignIndex] = updatedCampaign;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(campaigns));
-
-  return updatedCampaign;
 }; 
