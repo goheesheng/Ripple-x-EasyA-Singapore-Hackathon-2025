@@ -1,4 +1,6 @@
+
 import { useEffect, useState } from 'react';
+import { storeUser } from './services/api';
 import { motion } from 'framer-motion';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import CountUp from 'react-countup';
@@ -13,6 +15,11 @@ import Testimonials from './components/Testimonials';
 import CreateCampaign from './components/CreateCampaign';
 import CampaignList from './components/CampaignList';
 import { signInWithCrossmark, isAuthenticated, isOrganization, getCurrentUser } from './services/auth';
+
+type CrossmarkUser = {
+  account: string;
+  [key: string]: any;
+};
 
 // Impact statistics
 const impactStats = [
@@ -51,7 +58,9 @@ export function App() {
   const { ref: statsRef, inView: statsInView } = useInView({
     triggerOnce: true,
     threshold: 0.1
-  });
+  })
+  
+  ;
 
   // Load Google Font
   useEffect(() => {
@@ -83,18 +92,27 @@ export function App() {
       }
       
       // If not logged in, try to connect
-      if (!currentUser) {
-        try {
-          const user = await signInWithCrossmark();
-          if (!user) {
-            navigate('/');
-          }
-        } catch (error) {
-          console.error('Failed to connect:', error);
-          navigate('/');
-        }
+  if (!currentUser) {
+    try {
+      const rawUser = await signInWithCrossmark();
+      
+      if (!rawUser) {
+        throw new Error('Failed to get user data');
       }
-    };
+      
+      if (typeof rawUser === 'object' && 'account' in rawUser) {
+        const user = rawUser as CrossmarkUser;
+        await storeUser(user.account, true);
+      } else {
+        throw new Error('Invalid user data format');
+      }
+    } catch (error) {
+      console.error('Failed to connect:', error);
+      // Consider showing a user-friendly error message
+      navigate('/');
+    }
+  }
+;
 
     checkAuth();
     setIsLoading(false);
