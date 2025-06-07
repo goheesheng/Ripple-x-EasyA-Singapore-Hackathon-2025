@@ -11,7 +11,7 @@ const testimonials = [
     name: 'Emma Thompson',
     role: 'Regular Donor',
     image: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=150&h=150',
-    quote: 'Donating to GiveHope has been one of the most rewarding decisions I\'ve made. The transparency in how they use funds gives me confidence that my contributions are making a real difference.',
+    quote: 'Donating to DonorSpark has been one of the most rewarding decisions I\'ve made. The transparency in how they use funds gives me confidence that my contributions are making a real difference.',
     stars: 5
   },
   {
@@ -19,7 +19,7 @@ const testimonials = [
     name: 'Marcus Johnson',
     role: 'Volunteer',
     image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150&h=150',
-    quote: 'After volunteering with GiveHope, I saw firsthand the impact they make in communities. Their approach is thoughtful, sustainable, and truly transformative.',
+    quote: 'After volunteering with DonorSpark, I saw firsthand the impact they make in communities. Their approach is thoughtful, sustainable, and truly transformative.',
     stars: 5
   },
   {
@@ -27,7 +27,7 @@ const testimonials = [
     name: 'Sophia Chen',
     role: 'Corporate Partner',
     image: 'https://images.unsplash.com/photo-1534751516642-a1af1ef26a56?auto=format&fit=crop&q=80&w=150&h=150',
-    quote: 'Our company partnered with GiveHope for our CSR initiatives, and it has been an incredible journey. Their team is professional, dedicated, and passionate about creating positive change.',
+    quote: 'Our company partnered with DonorSpark for our CSR initiatives, and it has been an incredible journey. Their team is professional, dedicated, and passionate about creating positive change.',
     stars: 5
   }
 ];
