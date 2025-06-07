@@ -11,9 +11,14 @@ const Header = () => {
   const navigate = useNavigate();
 
   const handleSignIn = async () => {
-    const newUser = await signInWithCrossmark();
-    if (newUser) {
-      setUser(newUser);
+    try {
+      const newUser = await signInWithCrossmark();
+      if (newUser) {
+        setUser(newUser);
+      }
+    } catch (error) {
+      // Show user-friendly error message
+      alert(error instanceof Error ? error.message : 'Failed to connect wallet. Please try again.');
     }
   };
 

@@ -1,6 +1,6 @@
-// import sdk from '@crossmarkio/sdk';
+// Import the Crossmark SDK
+import sdk from '@crossmarkio/sdk';
 import { User, Donor, Organization } from '../types';
-import { Crossmark } from '../types';
 
 // Mock user type mapping (in a real app, this would be stored in a database)
 const userTypeMap: Record<string, 'donor' | 'organization'> = {};
@@ -40,16 +40,30 @@ const createOrganization = (address: string): Organization => ({
 export const signInWithCrossmark = async (): Promise<User | null> => {
   try {
     // Check if Crossmark is available
-    if (typeof window === 'undefined' || !window.crossmark) {
-      window.open('https://crossmark.io', '_blank');
-      throw new Error('Crossmark is not installed. Please install it from crossmark.io');
+    if (typeof window === 'undefined') {
+      throw new Error('Window object not available');
     }
 
-    // Try to sign in
-    const { address } = await window.crossmark.methods.signInAndWait();
-    if (!address) {
-      throw new Error('Failed to get address from Crossmark');
+    // Wait for Crossmark to be injected (up to 5 seconds)
+    let attempts = 0;
+    while (!window.crossmark && attempts < 50) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
     }
+
+    if (!window.crossmark) {
+      // Open Crossmark website in a new tab
+      window.open('https://crossmark.io', '_blank');
+      throw new Error('Please install Crossmark from crossmark.io and refresh the page');
+    }
+
+    // Try to sign in using the SDK
+    const signInResult = await sdk.methods.signInAndWait();
+    if (!signInResult?.response?.data?.address) {
+      throw new Error('Failed to get address from Crossmark. Please try again.');
+    }
+
+    const address = signInResult.response.data.address;
     const userType = getUserType(address);
 
     // Create the appropriate user type
@@ -61,7 +75,8 @@ export const signInWithCrossmark = async (): Promise<User | null> => {
     return user;
   } catch (error) {
     console.error('Crossmark sign in failed:', error);
-    return null;
+    // Only throw the error message, not the full error object
+    throw new Error(error instanceof Error ? error.message : 'Failed to connect to Crossmark');
   }
 };
 

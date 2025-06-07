@@ -64,20 +64,20 @@ export interface CrossmarkTransaction {
 }
 
 export interface CrossmarkResponse {
+  request: any;
   response: {
-    result: {
-      meta: {
-        TransactionResult: string;
-      };
-      hash: string;
+    data: {
+      address: string;
     };
   };
+  createdAt: number;
+  resolvedAt: number;
 }
 
 export interface Crossmark {
   methods: {
-    signAndSubmit(transaction: CrossmarkTransaction): Promise<CrossmarkResponse>;
-    signInAndWait(): Promise<{ address: string }>;
+    signAndSubmit(transaction: any): Promise<CrossmarkResponse>;
+    signInAndWait(): Promise<CrossmarkResponse>;
   };
 }
 
