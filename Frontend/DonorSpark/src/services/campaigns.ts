@@ -129,6 +129,7 @@ const sampleCampaigns: Campaign[] = [
     image: 'https://images.unsplash.com/photo-1548848221-0c2e497ed557',
     status: 'active',
     createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+    campaignWalletAddress: 'rDUwA8yoYYE2cnBkPEh2qDcRvLx8hybLh1',
   },
   {
     id: '2',
@@ -144,6 +145,7 @@ const sampleCampaigns: Campaign[] = [
     image: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b',
     status: 'active',
     createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+    campaignWalletAddress: 'rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH',
   },
   {
     id: '3',
@@ -159,6 +161,7 @@ const sampleCampaigns: Campaign[] = [
     image: 'https://images.unsplash.com/photo-1534567110353-1f46d0708b7c',
     status: 'active',
     createdAt: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString(),
+    campaignWalletAddress: 'rLNaPoKeeBjZe2qs6x52yVPZpZ8td4dc6w',
   },
   {
     id: '4',
@@ -174,6 +177,7 @@ const sampleCampaigns: Campaign[] = [
     image: 'https://images.unsplash.com/photo-1547592180-85f173990554',
     status: 'active',
     createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+    campaignWalletAddress: 'rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh',
   },
   {
     id: '5',
@@ -189,6 +193,7 @@ const sampleCampaigns: Campaign[] = [
     image: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef',
     status: 'active',
     createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    campaignWalletAddress: 'rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe',
   }
 ];
 
