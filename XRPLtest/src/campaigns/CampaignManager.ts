@@ -101,12 +101,17 @@ export class CampaignManager {
         peer: issuerWallet.address
       });
 
-      const donorBalance = donorLines.result.lines.find(
+      const donorLine = donorLines.result.lines.find(
         (line: any) => line.currency === config.rlusd.currency
-      )?.balance;
+      );
 
-      if (!donorBalance || parseFloat(donorBalance) < parseFloat(amount)) {
-        throw new Error('Insufficient RLUSD balance');
+      if (!donorLine) {
+        throw new Error('Donor has no RLUSD trust line');
+      }
+
+      const donorBalance = parseFloat(donorLine.balance);
+      if (donorBalance < parseFloat(amount)) {
+        throw new Error(`Insufficient RLUSD balance. Available: ${donorBalance}, Required: ${amount}`);
       }
 
       // Verify charity wallet has trust line
@@ -116,16 +121,27 @@ export class CampaignManager {
         peer: issuerWallet.address
       });
 
-      const charityHasTrustLine = charityLines.result.lines.some(
+      const charityLine = charityLines.result.lines.find(
         (line: any) => line.currency === config.rlusd.currency
       );
 
-      if (!charityHasTrustLine) {
+      if (!charityLine) {
         // Set up trust line for charity wallet if it doesn't exist
         await this.walletManager.createRLUSDTrustLine(campaign.charityWallet);
+        
+        // Verify trust line was created
+        const verifyLines = await client.request({
+          command: 'account_lines',
+          account: campaign.charityWallet.address,
+          peer: issuerWallet.address
+        });
+
+        if (!verifyLines.result.lines.some((line: any) => line.currency === config.rlusd.currency)) {
+          throw new Error('Failed to create charity wallet trust line');
+        }
       }
 
-      // Prepare direct payment transaction
+      // Prepare payment transaction
       const payment: Payment = {
         TransactionType: "Payment",
         Account: donorWallet.address,
@@ -134,8 +150,7 @@ export class CampaignManager {
           currency: config.rlusd.currency,
           value: amount,
           issuer: issuerWallet.address
-        },
-        Flags: 131072  // tfNoRippleDirect flag to force direct rippling
+        }
       };
 
       // Submit payment
@@ -150,6 +165,21 @@ export class CampaignManager {
         }
       } else {
         throw new Error('Invalid transaction metadata received');
+      }
+
+      // Verify the payment was successful by checking balances
+      const verifyCharityLines = await client.request({
+        command: 'account_lines',
+        account: campaign.charityWallet.address,
+        peer: issuerWallet.address
+      });
+
+      const verifyCharityLine = verifyCharityLines.result.lines.find(
+        (line: any) => line.currency === config.rlusd.currency
+      );
+
+      if (!verifyCharityLine) {
+        throw new Error('Failed to verify payment: charity trust line not found');
       }
 
       // Update campaign amount

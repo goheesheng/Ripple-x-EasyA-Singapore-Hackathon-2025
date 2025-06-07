@@ -1,9 +1,10 @@
-import { Client, Wallet, TrustSet, Transaction, TransactionMetadata, Payment } from 'xrpl';
+import { Client, Wallet, TrustSet, Transaction, TransactionMetadata, Payment, AccountSet } from 'xrpl';
 import { config } from '../config';
 
 export class WalletManager {
   private client: Client;
   private issuerWallet: Wallet | null = null;
+  private isConnected: boolean = false;
 
   constructor() {
     this.client = new Client(config.xrpl.server);
@@ -14,10 +15,20 @@ export class WalletManager {
    */
   async connect(): Promise<void> {
     try {
-      await this.client.connect();
-      // Set up issuer wallet on connection
-      await this.setupIssuerWallet();
+      if (!this.isConnected) {
+        await this.client.connect();
+        this.isConnected = true;
+        console.log('Connected to XRPL testnet:', config.xrpl.server);
+        
+        // Wait a moment to ensure connection is stable
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Set up issuer wallet on connection
+        await this.setupIssuerWallet();
+      }
     } catch (error) {
+      this.isConnected = false;
+      console.error('Connection error:', error);
       throw new Error(`Failed to connect to XRPL network: ${error}`);
     }
   }
@@ -27,15 +38,39 @@ export class WalletManager {
    */
   private async setupIssuerWallet(): Promise<void> {
     try {
+      if (!this.isConnected) {
+        throw new Error('Not connected to XRPL network');
+      }
+
       // Create a new issuer wallet
-      const { wallet: issuer } = await this.client.fundWallet();
+      const fundResult = await this.client.fundWallet();
+      const issuer = fundResult.wallet;
+      const balance = fundResult.balance;
+
       this.issuerWallet = issuer;
       
       // Update the config with the new issuer address
       config.rlusd.issuer = issuer.address;
 
+      // Wait a moment before setting account flags
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Set DefaultRipple flag on issuer account to allow rippling
+      const accountSet: AccountSet = {
+        TransactionType: "AccountSet",
+        Account: issuer.address,
+        SetFlag: 8, // Enable rippling
+        Flags: 0
+      };
+
+      const prepared = await this.client.autofill(accountSet);
+      const signed = issuer.sign(prepared);
+      await this.client.submitAndWait(signed.tx_blob);
+
       console.log('Created RLUSD issuer wallet:', issuer.address);
+      console.log('Issuer wallet balance:', balance, 'XRP');
     } catch (error) {
+      console.error('Error in setupIssuerWallet:', error);
       throw new Error(`Failed to set up issuer wallet: ${error}`);
     }
   }
@@ -52,9 +87,16 @@ export class WalletManager {
    */
   async createFundedTestWallet(): Promise<Wallet> {
     try {
-      const { wallet } = await this.client.fundWallet();
-      return wallet;
+      if (!this.isConnected) {
+        throw new Error('Not connected to XRPL network');
+      }
+
+      const fundResult = await this.client.fundWallet();
+      console.log('Created new test wallet:', fundResult.wallet.address);
+      console.log('Initial balance:', fundResult.balance, 'XRP');
+      return fundResult.wallet;
     } catch (error) {
+      console.error('Error in createFundedTestWallet:', error);
       throw new Error(`Failed to create funded test wallet: ${error}`);
     }
   }
@@ -108,9 +150,15 @@ export class WalletManager {
 
       if (existingLine) {
         console.log(`Trust line already exists for ${wallet.address}`);
+        // Ensure wallet has some RLUSD for testing
+        const balance = parseFloat(existingLine.balance);
+        if (balance < 1000) {
+          await this.issueRLUSD(wallet.address, '10000');
+        }
         return;
       }
 
+      // Create trust line
       const trustSet: TrustSet = {
         TransactionType: "TrustSet",
         Account: wallet.address,
@@ -118,8 +166,7 @@ export class WalletManager {
           currency: config.rlusd.currency,
           issuer: this.issuerWallet.address,
           value: limit
-        },
-        Flags: 131072  // tfSetNoRipple flag
+        }
       };
 
       const prepared = await this.client.autofill(trustSet);
@@ -136,10 +183,25 @@ export class WalletManager {
       }
 
       // Wait a moment for the trust line to be established
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // After trust line is created, issue some test RLUSD to the wallet
-      await this.issueRLUSD(wallet.address, '10000'); // Issue 10,000 RLUSD for testing
+      // Verify trust line was created
+      const verifyLines = await this.client.request({
+        command: 'account_lines',
+        account: wallet.address,
+        peer: this.issuerWallet.address
+      });
+
+      const verifyLine = verifyLines.result.lines.find(
+        (line: any) => line.currency === config.rlusd.currency
+      );
+
+      if (!verifyLine) {
+        throw new Error('Trust line verification failed');
+      }
+
+      // Issue initial RLUSD
+      await this.issueRLUSD(wallet.address, '10000');
 
       console.log(`Created trust line and issued RLUSD to ${wallet.address}`);
     } catch (error) {
