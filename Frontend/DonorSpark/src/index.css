@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-white text-gray-800;
+}
+
+.hero-gradient {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+}
+
+.impact-card {
+  @apply bg-white rounded-xl shadow-lg p-6 transition-all duration-300;
+}
+
+.impact-card:hover {
+  @apply shadow-xl transform -translate-y-1;
+}
+
+.donation-input:focus {
+  @apply ring-2 ring-indigo-500 border-indigo-500;
+}
+
+.testimonial-card {
+  @apply bg-white rounded-xl shadow-md p-6 my-4 mx-2;
+}
+
+.slick-dots li button:before {
+  @apply text-indigo-500;
+}
+
+.slick-prev:before, .slick-next:before {
+  @apply text-indigo-500;
+}
