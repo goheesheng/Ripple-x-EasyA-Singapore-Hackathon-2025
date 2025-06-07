@@ -2,12 +2,19 @@
 import sdk from '@crossmarkio/sdk';
 import { User, Donor, Organization } from '../types';
 
-// Mock user type mapping (in a real app, this would be stored in a database)
-const userTypeMap: Record<string, 'donor' | 'organization'> = {};
+// Whitelist of addresses that are allowed to be organizations
+const ORGANIZATION_WHITELIST = [
+  'rLt7p9bm8pkKoUAYDksD8RG1R7PxbzMC6z', // Organization wallet
+  // Add more whitelisted addresses here
+];
 
 // Get user type from address
 const getUserType = (address: string): 'donor' | 'organization' => {
-  return userTypeMap[address] || 'donor'; // Default to donor if not found
+  // Check if the address is in the whitelist
+  if (ORGANIZATION_WHITELIST.includes(address)) {
+    return 'organization';
+  }
+  return 'donor';
 };
 
 // Create a donor user
@@ -33,7 +40,7 @@ const createOrganization = (address: string): Organization => ({
   campaignsCreated: [],
   totalRaised: 0,
   walletAddress: address,
-  verified: false, // New organizations start as unverified
+  verified: ORGANIZATION_WHITELIST.includes(address), // Automatically verify whitelisted organizations
 });
 
 // Sign in with Crossmark
@@ -109,25 +116,13 @@ export const isDonor = (): boolean => {
   return user?.type === 'donor';
 };
 
-// Toggle user type between donor and organization
-export const toggleUserType = async (): Promise<void> => {
-  const user = getCurrentUser();
-  if (!user) return;
-
-  const newType = user.type === 'donor' ? 'organization' : 'donor';
-  userTypeMap[user.id] = newType;
-  
-  // Create a new user object with the appropriate type
-  const newUser = newType === 'organization' 
-    ? createOrganization(user.id)
-    : createDonor(user.id);
-    
-  localStorage.setItem('user', JSON.stringify(newUser));
+// Check if address is whitelisted
+export const isWhitelisted = (address: string): boolean => {
+  return ORGANIZATION_WHITELIST.includes(address);
 };
 
 // Update user type (for testing purposes)
 export const updateUserType = async (address: string, type: 'donor' | 'organization'): Promise<void> => {
-  userTypeMap[address] = type;
   const user = getCurrentUser();
   if (user && user.id === address) {
     user.type = type;

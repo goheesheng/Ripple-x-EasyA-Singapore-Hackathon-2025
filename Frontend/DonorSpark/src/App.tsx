@@ -12,7 +12,7 @@ import DonationForm from './components/DonationForm';
 import Testimonials from './components/Testimonials';
 import CreateCampaign from './components/CreateCampaign';
 import CampaignList from './components/CampaignList';
-import { signInWithCrossmark, isAuthenticated, isOrganization } from './services/auth';
+import { signInWithCrossmark, isAuthenticated, isOrganization, getCurrentUser } from './services/auth';
 
 // Impact statistics
 const impactStats = [
@@ -68,16 +68,31 @@ export function App() {
   // Check authentication on route change
   useEffect(() => {
     const checkAuth = async () => {
-      if (!isAuthenticated()) {
-        const user = await signInWithCrossmark();
-        if (!user) {
+      const currentUser = getCurrentUser();
+      
+      // Check if the current route requires organization access
+      const requiresOrg = ['/create-campaign', '/my-campaigns'].includes(location.pathname);
+      
+      if (requiresOrg) {
+        // If not logged in or not an organization, redirect to home
+        if (!currentUser || !isOrganization()) {
+          alert('Access denied. Only registered organizations can access this page.');
           navigate('/');
           return;
         }
       }
-
-      if (location.pathname === '/create-campaign' && !isOrganization()) {
-        navigate('/');
+      
+      // If not logged in, try to connect
+      if (!currentUser) {
+        try {
+          const user = await signInWithCrossmark();
+          if (!user) {
+            navigate('/');
+          }
+        } catch (error) {
+          console.error('Failed to connect:', error);
+          navigate('/');
+        }
       }
     };
 

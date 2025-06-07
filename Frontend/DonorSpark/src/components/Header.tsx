@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Heart, Menu, X, User, LogOut, PlusCircle, Gift, RefreshCw } from 'lucide-react';
-import { signInWithCrossmark, signOut, getCurrentUser, isOrganization, isDonor, toggleUserType } from '../services/auth';
+import { Heart, Menu, X, User, LogOut, PlusCircle, Gift } from 'lucide-react';
+import { signInWithCrossmark, signOut, getCurrentUser, isOrganization, isDonor } from '../services/auth';
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -15,6 +15,10 @@ const Header = () => {
       const newUser = await signInWithCrossmark();
       if (newUser) {
         setUser(newUser);
+        // If user is an organization, show welcome message
+        if (isOrganization()) {
+          alert('Welcome! As a registered organization, you can create and manage campaigns.');
+        }
       }
     } catch (error) {
       // Show user-friendly error message
@@ -27,11 +31,6 @@ const Header = () => {
     setUser(null);
     setShowUserMenu(false);
     navigate('/');
-  };
-
-  const handleToggleUserType = async () => {
-    await toggleUserType();
-    setUser(getCurrentUser());
   };
 
   // Function to truncate wallet address
@@ -70,26 +69,16 @@ const Header = () => {
                   className="flex items-center space-x-2 bg-gray-100 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
                 >
                   <User className="h-5 w-5 text-gray-600" />
-                  <span className="text-gray-700 font-medium">{truncateAddress(user.id)}</span>
+                  <span className="text-gray-700 font-medium">{truncateAddress(user.walletAddress)}</span>
                 </button>
 
                 {/* User Menu Dropdown */}
                 {showUserMenu && (
                   <motion.div
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2"
+                    className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-10"
                   >
-                    <div className="px-4 py-2 text-sm text-gray-500 border-b">
-                      {user.type === 'organization' ? 'Organization Account' : 'Donor Account'}
-                    </div>
-                    <button
-                      onClick={handleToggleUserType}
-                      className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:bg-gray-100 w-full text-left"
-                    >
-                      <RefreshCw className="h-5 w-5" />
-                      <span>Switch to {user.type === 'organization' ? 'Donor' : 'Organization'}</span>
-                    </button>
                     {isOrganization() && (
                       <>
                         <Link
@@ -111,16 +100,14 @@ const Header = () => {
                       </>
                     )}
                     {isDonor() && (
-                      <>
-                        <Link
-                          to="/my-donations"
-                          className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:bg-gray-100"
-                          onClick={() => setShowUserMenu(false)}
-                        >
-                          <Gift className="h-5 w-5" />
-                          <span>My Donations</span>
-                        </Link>
-                      </>
+                      <Link
+                        to="/my-donations"
+                        className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:bg-gray-100"
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        <Gift className="h-5 w-5" />
+                        <span>My Donations</span>
+                      </Link>
                     )}
                     <button
                       onClick={handleSignOut}
@@ -157,7 +144,7 @@ const Header = () => {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="md:hidden mt-4 space-y-4"
+            className="md:hidden mt-4 space-y-4 pb-4"
           >
             <Link
               to="/"
@@ -191,51 +178,11 @@ const Header = () => {
               <div className="space-y-4">
                 <div className="flex items-center space-x-2 bg-gray-100 px-4 py-2 rounded-lg">
                   <User className="h-5 w-5 text-gray-600" />
-                  <span className="text-gray-700 font-medium">{truncateAddress(user.id)}</span>
+                  <span className="text-gray-700 font-medium">{truncateAddress(user.walletAddress)}</span>
                 </div>
                 <div className="text-sm text-gray-500">
                   {user.type === 'organization' ? 'Organization Account' : 'Donor Account'}
                 </div>
-                <button
-                  onClick={() => {
-                    handleToggleUserType();
-                    setIsOpen(false);
-                  }}
-                  className="flex items-center space-x-2 text-gray-600 hover:text-indigo-600 transition-colors w-full"
-                >
-                  <RefreshCw className="h-5 w-5" />
-                  <span>Switch to {user.type === 'organization' ? 'Donor' : 'Organization'}</span>
-                </button>
-                {isOrganization() && (
-                  <>
-                    <Link
-                      to="/create-campaign"
-                      className="flex items-center space-x-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      <PlusCircle className="h-5 w-5" />
-                      <span>Create Campaign</span>
-                    </Link>
-                    <Link
-                      to="/my-campaigns"
-                      className="flex items-center space-x-2 text-gray-600 hover:text-indigo-600 transition-colors"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      <Gift className="h-5 w-5" />
-                      <span>My Campaigns</span>
-                    </Link>
-                  </>
-                )}
-                {isDonor() && (
-                  <Link
-                    to="/my-donations"
-                    className="flex items-center space-x-2 text-gray-600 hover:text-indigo-600 transition-colors"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    <Gift className="h-5 w-5" />
-                    <span>My Donations</span>
-                  </Link>
-                )}
                 <button
                   onClick={() => {
                     handleSignOut();
