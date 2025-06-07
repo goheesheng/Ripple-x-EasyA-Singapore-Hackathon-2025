@@ -52,7 +52,9 @@ export default function DonationModal({ isOpen, onClose, campaign, onDonationSuc
         campaign.id,
         campaign.campaignWalletAddress,
         donationAmount,
-        currentUser.id // donor address
+        currentUser.id, // donor address
+        campaign.title, // campaign title
+        campaign.organizationName // organization name
       );
 
       if (result.success) {
@@ -64,6 +66,16 @@ export default function DonationModal({ isOpen, onClose, campaign, onDonationSuc
         // Update campaign amount in parent component
         if (onDonationSuccess) {
           onDonationSuccess(donationAmount);
+        }
+        
+        // Trigger refresh of account summary if user is on that page
+        const currentPath = window.location.pathname;
+        if (currentPath === '/account-summary') {
+          console.log('🔄 Triggering account summary refresh after successful donation');
+          // Dispatch a custom event to trigger refresh
+          window.dispatchEvent(new CustomEvent('donation-success', { 
+            detail: { amount: donationAmount, campaignId: campaign.id } 
+          }));
         }
         
         // Close modal after 3 seconds
@@ -79,7 +91,29 @@ export default function DonationModal({ isOpen, onClose, campaign, onDonationSuc
       
     } catch (err) {
       console.error('❌ Donation failed:', err);
-      const errorMessage = err instanceof Error ? err.message : 'An error occurred while processing your donation';
+      let errorMessage = 'An error occurred while processing your donation';
+      
+      if (err instanceof Error) {
+        errorMessage = err.message;
+        
+        // Provide more helpful error messages
+        if (err.message.includes('No transaction hash') || err.message.includes('Invalid transaction hash')) {
+          errorMessage = 'Transaction processing issue detected. Please check your Crossmark wallet to see if the transaction was completed. If not, please try again.';
+        } else if (err.message.includes('hash not immediately available')) {
+          errorMessage = 'Transaction was submitted successfully but confirmation is taking longer than expected. Please check your Crossmark wallet for status.';
+        } else if (err.message.includes('cancelled')) {
+          errorMessage = 'Donation was cancelled. Please try again when ready.';
+        } else if (err.message.includes('rejected or failed')) {
+          errorMessage = 'Transaction was rejected. This could be due to insufficient funds or other wallet issues. Please check your balance and try again.';
+        } else if (err.message.includes('Crossmark extension not found')) {
+          errorMessage = 'Please install the Crossmark extension to make donations, or use demo mode for testing.';
+        } else if (err.message.includes('Check console for full response')) {
+          errorMessage = 'Transaction response format unexpected. Please check browser console for details and contact support.';
+        } else if (err.message.includes('validation timeout')) {
+          errorMessage = 'Transaction was submitted but taking longer to confirm. Please check your wallet and try again if needed.';
+        }
+      }
+      
       setError(errorMessage);
     } finally {
       setIsProcessing(false);
@@ -125,14 +159,14 @@ export default function DonationModal({ isOpen, onClose, campaign, onDonationSuc
                 <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
                 <h4 className="text-xl font-bold text-gray-800 mb-2">Thank You!</h4>
                 <p className="text-gray-600">
-                  Your donation of {amount} XRP has been processed successfully and validated on the XRPL blockchain!
+                  Your donation of {amount} RLUSD has been processed successfully and validated on the XRPL blockchain!
                 </p>
               </motion.div>
             ) : (
               <div className="space-y-4">
                 <div>
                   <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">
-                    Donation Amount (XRP)
+                    Donation Amount (RLUSD)
                   </label>
                   <div className="relative">
                     <input
@@ -143,10 +177,10 @@ export default function DonationModal({ isOpen, onClose, campaign, onDonationSuc
                       placeholder="Enter amount"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                       min="1"
-                      step="0.1"
+                      step="0.01"
                     />
                     <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                      XRP
+                      RLUSD
                     </div>
                   </div>
                 </div>

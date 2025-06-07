@@ -170,7 +170,7 @@ export const getCampaigns = async (): Promise<Campaign[]> => {
     console.error('Failed to fetch campaigns from database:', error);
     
     // Fallback to localStorage if API fails
-    const campaigns = localStorage.getItem(STORAGE_KEY);
+  const campaigns = localStorage.getItem(STORAGE_KEY);
     if (campaigns) {
       return JSON.parse(campaigns);
     }
@@ -466,9 +466,9 @@ export const createCampaign = async (campaignData: Omit<Campaign, 'id' | 'create
     } catch (dbError) {
       console.error('Failed to store campaign in database:', dbError);
       // Fall back to localStorage
-      const campaigns = await getCampaigns();
-      campaigns.push(campaign);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(campaigns));
+    const campaigns = await getCampaigns();
+    campaigns.push(campaign);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(campaigns));
     }
     
     // Store wallet seed securely in localStorage (sensitive data)
@@ -494,9 +494,9 @@ export const createCampaign = async (campaignData: Omit<Campaign, 'id' | 'create
     } catch (dbError) {
       console.error('Failed to store campaign in database:', dbError);
       // Fall back to localStorage only
-      const campaigns = await getCampaigns();
-      campaigns.push(campaign);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(campaigns));
+    const campaigns = await getCampaigns();
+    campaigns.push(campaign);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(campaigns));
     }
     
     // Store wallet info even if transaction fails
@@ -526,8 +526,8 @@ export const getCampaignsByOrganization = async (organizationId: string): Promis
     console.error('Failed to fetch organization campaigns from database:', error);
     
     // Fallback to localStorage filtering
-    const campaigns = await getCampaigns();
-    return campaigns.filter(campaign => campaign.organizationId === organizationId);
+  const campaigns = await getCampaigns();
+  return campaigns.filter(campaign => campaign.organizationId === organizationId);
   }
 };
 
@@ -565,21 +565,21 @@ export const updateCampaignAmount = async (campaignId: string, amount: number): 
     console.error('Failed to update campaign amount in database:', error);
     
     // Fallback to localStorage
-    const campaigns = await getCampaigns();
-    const campaignIndex = campaigns.findIndex(c => c.id === campaignId);
-    
-    if (campaignIndex === -1) {
-      throw new Error('Campaign not found');
-    }
+  const campaigns = await getCampaigns();
+  const campaignIndex = campaigns.findIndex(c => c.id === campaignId);
+  
+  if (campaignIndex === -1) {
+    throw new Error('Campaign not found');
+  }
 
-    const updatedCampaign = {
-      ...campaigns[campaignIndex],
-      currentAmount: campaigns[campaignIndex].currentAmount + amount
-    };
+  const updatedCampaign = {
+    ...campaigns[campaignIndex],
+    currentAmount: campaigns[campaignIndex].currentAmount + amount
+  };
 
-    campaigns[campaignIndex] = updatedCampaign;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(campaigns));
+  campaigns[campaignIndex] = updatedCampaign;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(campaigns));
 
-    return updatedCampaign;
+  return updatedCampaign;
   }
 }; 

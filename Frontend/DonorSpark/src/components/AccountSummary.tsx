@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Calendar, Download, DollarSign, Target } from 'lucide-react';
+import { User, Calendar, Download, DollarSign, Target, RefreshCw } from 'lucide-react';
 import { getCurrentUser } from '../services/auth';
 import { getDonorDonations, Donation } from '../services/donations';
 
@@ -41,15 +41,39 @@ const AccountSummary = () => {
     loadDonationSummary();
   }, [year]);
 
-  const loadDonationSummary = async () => {
+  // Auto-refresh donations periodically to catch new donations
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log('🔄 Auto-refreshing donation summary...');
+      loadDonationSummary(false); // Don't show loading spinner for auto-refresh
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [year]);
+
+  // Listen for donation success events for immediate refresh
+  useEffect(() => {
+    const handleDonationSuccess = (event: any) => {
+      console.log('🎉 Donation success event received:', event.detail);
+      console.log('🔄 Immediately refreshing donation summary...');
+      loadDonationSummary(false);
+    };
+
+    window.addEventListener('donation-success', handleDonationSuccess);
+    return () => window.removeEventListener('donation-success', handleDonationSuccess);
+  }, []);
+
+  const loadDonationSummary = async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       setError(null);
       
       const user = getCurrentUser();
       if (!user || user.type !== 'donor') {
         throw new Error('Please login as a donor to view your donation summary');
       }
+
+      console.log('📊 Loading donation summary for user:', user.id);
 
       // Get donations from database
       const allDonations = await getDonorDonations(user.id);
@@ -75,11 +99,22 @@ const AccountSummary = () => {
       };
 
       setSummary(donationSummary);
+      console.log('✅ Donation summary loaded:', {
+        totalAmount: donationSummary.totalAmount,
+        campaignCount: donationSummary.campaignCount,
+        donationCount: donationSummary.donations.length
+      });
     } catch (err) {
+      console.error('❌ Failed to load donation summary:', err);
       setError(err instanceof Error ? err.message : 'Failed to load donation summary');
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
+  };
+
+  const handleRefresh = async () => {
+    console.log('🔄 Manual refresh requested');
+    await loadDonationSummary(false);
   };
 
   const downloadTaxReport = () => {
@@ -127,15 +162,25 @@ const AccountSummary = () => {
           <div className="px-6 py-8">
             <div className="flex justify-between items-center mb-8">
               <h1 className="text-3xl font-bold text-gray-900">Donation Summary</h1>
-              <select
-                value={year}
-                onChange={(e) => setYear(parseInt(e.target.value))}
-                className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              >
-                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(y => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={handleRefresh}
+                  className="flex items-center px-3 py-2 text-indigo-600 hover:text-indigo-800 transition-colors"
+                  title="Refresh donations"
+                >
+                  <RefreshCw className="w-4 h-4 mr-1" />
+                  Refresh
+                </button>
+                <select
+                  value={year}
+                  onChange={(e) => setYear(parseInt(e.target.value))}
+                  className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                >
+                  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {error ? (
