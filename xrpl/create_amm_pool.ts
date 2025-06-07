@@ -7,8 +7,10 @@ import type { AMMCreate, TrustSet, AccountSet } from 'xrpl'
 const TESTNET_JSON_RPC = "wss://s.altnet.rippletest.net:51233"
 const SGD_ISSUER = "rh6UCKiPqqpSnSGfWz1wA9ZSu9j5FFLGVN"
 
-const RLUSD_ISSUER = "rhLdr1iXiVsMxvcTwbuK1Kbkg9DuEcdMNC"
-// const RLUSD_ISSUER = rQhWct2fv4Vc4KRjRgMrxa8xPN9Zx9iLKV
+// const RLUSD_ISSUER = "rhLdr1iXiVsMxvcTwbuK1Kbkg9DuEcdMNC"
+const RLUSD_ISSUER = "rQhWct2fv4Vc4KRjRgMrxa8xPN9Zx9iLKV"
+
+const RLUSD_HEX = "524C555344000000000000000000000000000000"; // RLUSD in hex
 
 async function main() {
     const client = new Client(TESTNET_JSON_RPC)
@@ -52,7 +54,7 @@ async function main() {
             TransactionType: "TrustSet",
             Account: wallet.address,
             LimitAmount: {
-                currency: "USD",
+                currency: RLUSD_HEX,
                 issuer: RLUSD_ISSUER,
                 value: "1000000"
             }
@@ -71,7 +73,7 @@ async function main() {
                 value: "5"
             },
             Amount2: {
-                currency: "USD",
+                currency: RLUSD_HEX,
                 issuer: RLUSD_ISSUER,
                 value: "5"
             },
@@ -93,7 +95,7 @@ async function main() {
                         issuer: SGD_ISSUER
                     },
                     asset2: {
-                        currency: "USD",
+                        currency: RLUSD_HEX,
                         issuer: RLUSD_ISSUER
                     }
                 })
