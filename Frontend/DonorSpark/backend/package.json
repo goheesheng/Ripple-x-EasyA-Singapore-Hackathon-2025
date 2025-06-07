@@ -1,0 +1,21 @@
+{
+  "name": "donorspark-backend",
+  "version": "1.0.0",
+  "description": "Backend service for DonorSpark with XRPL transaction monitoring",
+  "main": "index.js",
+  "scripts": {
+    "start": "ts-node src/index.ts",
+    "dev": "ts-node --watch src/index.ts",
+    "build": "tsc",
+    "test": "jest"
+  },
+  "dependencies": {
+    "xrpl": "^2.14.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+} 
