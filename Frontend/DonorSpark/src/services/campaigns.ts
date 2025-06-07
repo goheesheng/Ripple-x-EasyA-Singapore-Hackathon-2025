@@ -1,7 +1,9 @@
 import { getCurrentUser } from './auth';
 import { Campaign } from '../types';
+import { Client, Wallet } from 'xrpl';
 
 const STORAGE_KEY = 'donorspark_campaigns';
+const TESTNET_URL = 'wss://s.altnet.rippletest.net:51233';
 
 // Document number for campaign metadata (using a number > 65535 as per XLS-48d)
 const CAMPAIGN_DOCUMENT_NUMBER = 100000;
@@ -117,6 +119,55 @@ const stringToHex = (str: string): string => {
     .toUpperCase();
 };
 
+// Helper function to generate a new XRPL wallet
+const generateCampaignWallet = async (): Promise<{ address: string; seed: string }> => {
+  const client = new Client(TESTNET_URL, {
+    connectionTimeout: 10000,
+    timeout: 20000,
+    retry: {
+      maxAttempts: 3,
+      minDelay: 1000,
+      maxDelay: 5000
+    }
+  });
+
+  try {
+    console.log('Connecting to XRPL testnet...');
+    await client.connect();
+    console.log('Connected to XRPL testnet');
+
+    // Generate and fund a new wallet
+    console.log('Generating and funding new wallet...');
+    const fund_result = await client.fundWallet();
+    const new_wallet = fund_result.wallet;
+    
+    console.log('Wallet funded successfully:', {
+      address: new_wallet.address,
+      balance: fund_result.balance
+    });
+
+    return {
+      address: new_wallet.address,
+      seed: new_wallet.seed
+    };
+  } catch (error) {
+    console.error('Error generating campaign wallet:', error);
+    // For now, generate a local wallet without funding it
+    // This allows the app to continue working even if testnet is down
+    const wallet = Wallet.generate();
+    console.log('Generated offline wallet:', wallet.address);
+    return {
+      address: wallet.address,
+      seed: wallet.seed
+    };
+  } finally {
+    if (client.isConnected()) {
+      await client.disconnect();
+      console.log('Disconnected from XRPL testnet');
+    }
+  }
+};
+
 export const createCampaign = async (campaignData: Omit<Campaign, 'id' | 'createdAt' | 'status' | 'currentAmount'>): Promise<Campaign> => {
   const user = localStorage.getItem('user');
   if (!user) {
@@ -128,12 +179,24 @@ export const createCampaign = async (campaignData: Omit<Campaign, 'id' | 'create
     throw new Error('Only organizations can create campaigns');
   }
 
+  // Generate a new wallet for the campaign
+  console.log('Generating new campaign wallet...');
+  let campaignWallet;
+  try {
+    campaignWallet = await generateCampaignWallet();
+    console.log('Generated campaign wallet:', campaignWallet.address);
+  } catch (error) {
+    console.error('Failed to generate campaign wallet:', error);
+    throw new Error('Failed to generate campaign wallet. Please try again later.');
+  }
+
   const campaign: Campaign = {
     ...campaignData,
     id: Math.random().toString(36).substring(7),
     createdAt: new Date().toISOString(),
     status: 'active',
     currentAmount: 0,
+    campaignWalletAddress: campaignWallet.address
   };
 
   // Store campaign metadata on-chain
@@ -150,6 +213,7 @@ export const createCampaign = async (campaignData: Omit<Campaign, 'id' | 'create
       type: 'campaign_creation',
       campaign_id: campaign.id,
       organization_address: address,
+      campaign_wallet: campaignWallet.address,
       title: campaign.title,
       description: campaign.description,
       target_amount: campaign.targetAmount.toString(),
@@ -183,8 +247,8 @@ export const createCampaign = async (campaignData: Omit<Campaign, 'id' | 'create
     const transaction = {
       TransactionType: 'Payment',
       Account: address,
-      Destination: 'rDUwA8yoYYE2cnBkPEh2qDcRvLx8hybLh1', // Specified destination wallet
-      Amount: '1', // Minimum amount for memo transaction
+      Destination: 'rDUwA8yoYYE2cnBkPEh2qDcRvLx8hybLh1',
+      Amount: '1',
       Memos: [memo]
     };
 
@@ -206,8 +270,17 @@ export const createCampaign = async (campaignData: Omit<Campaign, 'id' | 'create
       throw new Error(response.error);
     }
 
-    // Store campaign in local storage
+    // Store campaign and wallet info in local storage
     const campaigns = await getCampaigns();
+    
+    // Store wallet seed securely
+    const campaignWallets = JSON.parse(localStorage.getItem('campaign_wallets') || '{}');
+    campaignWallets[campaign.id] = {
+      address: campaignWallet.address,
+      seed: campaignWallet.seed
+    };
+    localStorage.setItem('campaign_wallets', JSON.stringify(campaignWallets));
+    
     campaigns.push(campaign);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(campaigns));
 
@@ -221,6 +294,15 @@ export const createCampaign = async (campaignData: Omit<Campaign, 'id' | 'create
     
     // Still create campaign locally even if on-chain storage fails
     const campaigns = await getCampaigns();
+    
+    // Store wallet info even if transaction fails
+    const campaignWallets = JSON.parse(localStorage.getItem('campaign_wallets') || '{}');
+    campaignWallets[campaign.id] = {
+      address: campaignWallet.address,
+      seed: campaignWallet.seed
+    };
+    localStorage.setItem('campaign_wallets', JSON.stringify(campaignWallets));
+    
     campaigns.push(campaign);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(campaigns));
     

@@ -13,9 +13,18 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      stream: 'stream-browserify',
+      crypto: 'crypto-browserify',
     },
   },
   build: {
     chunkSizeWarningLimit: 5000,
   },
+  optimizeDeps: {
+    esbuildOptions: {
+      define: {
+        global: 'globalThis'
+      }
+    }
+  }
 });

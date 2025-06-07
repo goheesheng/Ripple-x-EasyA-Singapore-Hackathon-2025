@@ -36,6 +36,7 @@ export interface Campaign {
   image?: string;
   status: 'active' | 'completed' | 'cancelled';
   createdAt: string;
+  campaignWalletAddress?: string;
 }
 
 export interface Donation {
