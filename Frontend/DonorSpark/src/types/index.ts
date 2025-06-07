@@ -65,14 +65,18 @@ export interface CrossmarkTransaction {
 }
 
 export interface CrossmarkResponse {
-  request: any;
-  response: {
-    data: {
-      address: string;
+  request?: any;
+  response?: {
+    data?: {
+      address?: string;
     };
   };
-  createdAt: number;
-  resolvedAt: number;
+  result?: {
+    hash?: string;
+  };
+  error?: string;
+  createdAt?: number;
+  resolvedAt?: number;
 }
 
 export interface Crossmark {
@@ -86,4 +90,4 @@ declare global {
   interface Window {
     crossmark: Crossmark;
   }
-} 
+}

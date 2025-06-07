@@ -12,7 +12,7 @@ import DonationForm from './components/DonationForm';
 import Testimonials from './components/Testimonials';
 import CreateCampaign from './components/CreateCampaign';
 import CampaignList from './components/CampaignList';
-import { signInWithCrossmark, isAuthenticated, isOrganization, getCurrentUser } from './services/auth';
+import { signInWithCrossmark, isOrganization, getCurrentUser } from './services/auth';
 import AccountSummary from './components/AccountSummary';
 
 // Impact statistics
@@ -198,139 +198,38 @@ export function App() {
             </section>
             
             {/* About Section */}
-            <section id="about" className="py-20 px-4">
-              <div className="container mx-auto">
-                <motion.div 
-                  variants={fadeIn}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true }}
-                  className="text-center max-w-3xl mx-auto mb-16"
-                >
-                  <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-800">Our Mission</h2>
-                  <p className="text-lg text-gray-600">
-                    At GiveHope, we believe in creating sustainable change through community-centered initiatives. 
-                    Our approach focuses on empowering communities with the tools and resources they need to thrive.
-                  </p>
-                </motion.div>
-                
-                <div className="grid md:grid-cols-2 gap-12 items-center">
-                  <motion.div
-                    initial={{ opacity: 0, x: -30 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.6 }}
-                    viewport={{ once: true }}
-                  >
-                    <img 
-                      src="https://images.unsplash.com/photo-1593113646773-028c64a8f1b8?auto=format&fit=crop&q=80&w=600" 
-                      alt="Our mission in action" 
-                      className="rounded-lg shadow-lg"
-                    />
-                  </motion.div>
-                  
-                  <motion.div
-                    initial={{ opacity: 0, x: 30 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.6 }}
-                    viewport={{ once: true }}
-                  >
-                    <h3 className="text-2xl font-bold mb-4 text-indigo-700">How We Work</h3>
-                    <p className="text-gray-700 mb-6">
-                      Our work spans across education, healthcare, clean water, and humanitarian relief. We partner with local organizations to ensure that our efforts are culturally appropriate and sustainable.
-                    </p>
-                    <ul className="space-y-4">
-                      {[
-                        'Community-Driven Projects',
-                        'Sustainable Development',
-                        'Local Partnerships',
-                        'Transparency & Accountability'
-                      ].map((item, index) => (
-                        <motion.li 
-                          key={index}
-                          initial={{ opacity: 0, x: 20 }}
-                          whileInView={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.1 }}
-                          viewport={{ once: true }}
-                          className="flex items-start"
-                        >
-                          <div className="bg-indigo-100 p-1 rounded-full mr-3 mt-1">
-                            <Heart size={16} className="text-indigo-600" />
-                          </div>
-                          <span>{item}</span>
-                        </motion.li>
-                      ))}
-                    </ul>
-                  </motion.div>
-                </div>
-              </div>
-            </section>
-            
-            {/* Impact Statistics */}
-            <section ref={statsRef} className="py-20 bg-indigo-50">
-              <div className="container mx-auto px-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-                  {impactStats.map((stat) => (
-                    <motion.div
-                      key={stat.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={statsInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-                      transition={{ duration: 0.5, delay: stat.id * 0.1 }}
-                      className="text-center"
-                    >
-                      <div className="flex justify-center mb-4">
-                        {stat.icon}
-                      </div>
-                      <div className="text-3xl md:text-4xl font-bold text-indigo-700 mb-2">
-                        {statsInView && (
-                          <CountUp
-                            start={0}
-                            end={stat.value}
-                            duration={2.5}
-                            prefix={stat.prefix}
-                            suffix={stat.suffix}
-                          />
-                        )}
-                      </div>
-                      <p className="text-gray-600">{stat.label}</p>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            </section>
-            
-            {/* Programs Section */}
-            <section className="py-20">
+            <section id="about" className="py-20 bg-white">
               <div className="container mx-auto px-4">
                 <motion.div
-                  variants={fadeIn}
                   initial="hidden"
                   whileInView="visible"
                   viewport={{ once: true }}
-                  className="text-center max-w-3xl mx-auto mb-16"
+                  variants={fadeIn}
+                  className="text-center mb-16"
                 >
-                  <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-800">Our Programs</h2>
-                  <p className="text-lg text-gray-600">
-                    We focus on key areas that create lasting impact in communities around the world.
+                  <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
+                    About DonorSpark
+                  </h2>
+                  <p className="text-gray-600 max-w-2xl mx-auto">
+                    We believe in the power of collective action. DonorSpark connects compassionate donors with 
+                    verified organizations to create lasting positive change in communities worldwide.
                   </p>
                 </motion.div>
                 
-                <div className="grid md:grid-cols-3 gap-8">
+                <div className="grid md:grid-cols-3 gap-8 mb-16">
                   {programs.map((program, index) => (
                     <motion.div
                       key={program.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5, delay: index * 0.1 }}
+                      initial="hidden"
+                      whileInView="visible"
                       viewport={{ once: true }}
-                      className="bg-white rounded-lg shadow-lg overflow-hidden"
+                      variants={fadeIn}
+                      transition={{ delay: index * 0.2 }}
+                      className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
                     >
-                      <img 
-                        src={program.image} 
-                        alt={program.title}
-                        className="w-full h-48 object-cover"
-                      />
+                      <img src={program.image} alt={program.title} className="w-full h-48 object-cover" />
                       <div className="p-6">
-                        <h3 className="text-xl font-bold mb-2 text-gray-800">{program.title}</h3>
+                        <h3 className="text-xl font-semibold text-gray-800 mb-2">{program.title}</h3>
                         <p className="text-gray-600">{program.description}</p>
                       </div>
                     </motion.div>
@@ -339,73 +238,139 @@ export function App() {
               </div>
             </section>
             
+            {/* Impact Section */}
+            <section className="py-20 bg-indigo-50">
+              <div className="container mx-auto px-4">
+                <motion.div
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true }}
+                  variants={fadeIn}
+                  className="text-center mb-16"
+                >
+                  <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
+                    Our Impact Together
+                  </h2>
+                  <p className="text-gray-600 max-w-2xl mx-auto">
+                    See the incredible difference we've made together. Every donation, no matter the size, 
+                    contributes to these amazing achievements.
+                  </p>
+                </motion.div>
+                
+                <div ref={statsRef} className="grid md:grid-cols-4 gap-8">
+                  {impactStats.map((stat, index) => (
+                    <motion.div
+                      key={stat.id}
+                      initial="hidden"
+                      whileInView="visible"
+                      viewport={{ once: true }}
+                      variants={fadeIn}
+                      transition={{ delay: index * 0.1 }}
+                      className="impact-card text-center"
+                    >
+                      <div className="flex justify-center mb-4">
+                        {stat.icon}
+                      </div>
+                      <div className="text-3xl font-bold text-gray-800 mb-2">
+                        {statsInView && (
+                          <>
+                            {stat.prefix}
+                            <CountUp end={stat.value} duration={2} />
+                            {stat.suffix}
+                          </>
+                        )}
+                      </div>
+                      <div className="text-gray-600">{stat.label}</div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </section>
+            
             {/* Testimonials Section */}
-            <section className="py-20 bg-gray-50">
+            <section className="py-20 bg-white">
               <Testimonials />
             </section>
             
-            {/* Donation Form Section */}
-            <section id="donate" className="py-20">
-              <DonationForm />
+            {/* Donation Section */}
+            <section id="donate" className="py-20 bg-gray-50">
+              <div className="container mx-auto px-4">
+                <motion.div
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true }}
+                  variants={fadeIn}
+                  className="text-center mb-16"
+                >
+                  <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
+                    Make a Donation Today
+                  </h2>
+                  <p className="text-gray-600 max-w-2xl mx-auto">
+                    Your contribution can make a real difference. Choose an amount that feels right for you 
+                    and help us continue our important work.
+                  </p>
+                </motion.div>
+                
+                <DonationForm />
+              </div>
             </section>
             
             {/* Footer */}
-            <footer className="bg-gray-900 text-white py-12">
+            <footer className="bg-gray-800 text-white py-16">
               <div className="container mx-auto px-4">
                 <div className="grid md:grid-cols-4 gap-8">
                   <div>
-                    <h3 className="text-xl font-bold mb-4">GiveHope</h3>
-                    <p className="text-gray-400">
-                      Making a difference in communities around the world through sustainable development and humanitarian aid.
+                    <h3 className="text-xl font-bold mb-4">DonorSpark</h3>
+                    <p className="text-gray-300">
+                      Connecting hearts with causes. Making a difference, one donation at a time.
                     </p>
                   </div>
-                  
                   <div>
                     <h4 className="text-lg font-semibold mb-4">Quick Links</h4>
                     <ul className="space-y-2">
-                      <li><a href="#home" className="text-gray-400 hover:text-white transition">Home</a></li>
-                      <li><a href="#about" className="text-gray-400 hover:text-white transition">About</a></li>
-                      <li><a href="#campaigns" className="text-gray-400 hover:text-white transition">Campaigns</a></li>
-                      <li><a href="#donate" className="text-gray-400 hover:text-white transition">Donate</a></li>
+                      <li><a href="#home" className="text-gray-300 hover:text-white transition-colors">Home</a></li>
+                      <li><a href="#about" className="text-gray-300 hover:text-white transition-colors">About</a></li>
+                      <li><a href="#campaigns" className="text-gray-300 hover:text-white transition-colors">Campaigns</a></li>
+                      <li><a href="#donate" className="text-gray-300 hover:text-white transition-colors">Donate</a></li>
                     </ul>
                   </div>
-                  
                   <div>
-                    <h4 className="text-lg font-semibold mb-4">Contact Us</h4>
-                    <ul className="space-y-2">
-                      <li className="flex items-center text-gray-400">
-                        <Mail size={16} className="mr-2" />
-                        contact@givehope.org
-                      </li>
-                      <li className="flex items-center text-gray-400">
+                    <h4 className="text-lg font-semibold mb-4">Contact</h4>
+                    <div className="space-y-2">
+                      <div className="flex items-center">
                         <Phone size={16} className="mr-2" />
-                        +1 (555) 123-4567
-                      </li>
-                      <li className="flex items-center text-gray-400">
+                        <span className="text-gray-300">+1 (555) 123-4567</span>
+                      </div>
+                      <div className="flex items-center">
+                        <Mail size={16} className="mr-2" />
+                        <span className="text-gray-300">hello@donorspark.org</span>
+                      </div>
+                      <div className="flex items-center">
                         <MapPin size={16} className="mr-2" />
-                        123 Hope Street, City, Country
-                      </li>
-                    </ul>
+                        <span className="text-gray-300">123 Charity Lane, Hope City</span>
+                      </div>
+                    </div>
                   </div>
-                  
                   <div>
                     <h4 className="text-lg font-semibold mb-4">Follow Us</h4>
                     <div className="flex space-x-4">
-                      <a href="#" className="text-gray-400 hover:text-white transition">
-                        <Facebook size={20} />
+                      <a href="#" className="text-gray-300 hover:text-white transition-colors">
+                        <Facebook size={24} />
                       </a>
-                      <a href="#" className="text-gray-400 hover:text-white transition">
-                        <Twitter size={20} />
+                      <a href="#" className="text-gray-300 hover:text-white transition-colors">
+                        <Twitter size={24} />
                       </a>
-                      <a href="#" className="text-gray-400 hover:text-white transition">
-                        <Instagram size={20} />
+                      <a href="#" className="text-gray-300 hover:text-white transition-colors">
+                        <Instagram size={24} />
                       </a>
                     </div>
                   </div>
                 </div>
                 
-                <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-                  <p>&copy; {new Date().getFullYear()} GiveHope. All rights reserved.</p>
+                <div className="border-t border-gray-700 mt-12 pt-8 text-center">
+                  <p className="text-gray-300">
+                    © 2024 DonorSpark. All rights reserved. Made with ❤️ for a better world.
+                  </p>
                 </div>
               </div>
             </footer>

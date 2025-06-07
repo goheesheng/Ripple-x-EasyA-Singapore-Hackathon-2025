@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Slider from 'react-slick';
 import { Quote, Star } from 'lucide-react';

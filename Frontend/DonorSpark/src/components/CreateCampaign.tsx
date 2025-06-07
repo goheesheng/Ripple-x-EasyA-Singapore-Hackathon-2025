@@ -4,12 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { Building2, Calendar, DollarSign, FileText, Tag } from 'lucide-react';
 import { createCampaign } from '../services/campaigns';
 import { getCurrentUser } from '../services/auth';
-import { Campaign } from '../types/index';
 
 const CreateCampaign = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string>('');
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -79,8 +79,12 @@ const CreateCampaign = () => {
       };
 
       console.log('Creating campaign with data:', campaignData);
+      setStatusMessage('Creating campaign and submitting to blockchain...');
+      
       const campaign = await createCampaign(campaignData);
       console.log('Campaign created successfully:', campaign);
+      
+      setStatusMessage('Campaign created and stored successfully!');
 
       // Show success message before redirecting
       // You might want to add a toast notification system here
@@ -104,6 +108,7 @@ const CreateCampaign = () => {
       }
     } finally {
       setIsLoading(false);
+      setStatusMessage('');
     }
   };
 
@@ -122,6 +127,12 @@ const CreateCampaign = () => {
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-6">
             {error}
+          </div>
+        )}
+
+        {statusMessage && (
+          <div className="bg-blue-50 border border-blue-200 text-blue-600 px-4 py-3 rounded-lg mb-6">
+            {statusMessage}
           </div>
         )}
 

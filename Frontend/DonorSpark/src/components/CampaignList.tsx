@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Calendar, DollarSign, Users } from 'lucide-react';
+import { ArrowRight, Calendar, Users } from 'lucide-react';
 import DonationModal from './DonationModal';
 import { getCurrentUser, isOrganization } from '../services/auth';
 import { Campaign, getCampaigns, getCampaignsByOrganization, getCampaignsByDonor, updateCampaignAmount } from '../services/campaigns';

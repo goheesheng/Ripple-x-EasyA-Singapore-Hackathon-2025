@@ -1,24 +1,57 @@
-import { getCurrentUser } from './auth';
 import { Campaign } from '../types';
 import { Client, Wallet } from 'xrpl';
+
+// Only import database on server-side (when not in browser)
+let storeCampaignTransaction: ((campaignId: string, txHash: string) => Promise<void>) | null = null;
+
+// Dynamically import database functions only on server-side
+if (typeof window === 'undefined') {
+  // This will only run on server-side
+  import('./database').then(db => {
+    storeCampaignTransaction = db.storeCampaignTransaction;
+  }).catch(() => {
+    console.log('Database not available in browser environment');
+  });
+}
+
+// Alternative: Create an API call function for browser-side database operations
+const storeCampaignToDatabase = async (campaignId: string, txHash: string): Promise<void> => {
+  try {
+    // Make API call to backend server
+    const response = await fetch('http://localhost:3001/api/campaigns/transactions', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ campaignId, txHash })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    console.log('Campaign transaction stored in database:', result);
+    
+  } catch (error) {
+    console.error('Failed to store campaign transaction in database:', error);
+    
+    // Fallback: Store in localStorage as backup
+    console.log('Falling back to localStorage storage');
+    const transactions = JSON.parse(localStorage.getItem('campaign_transactions') || '[]');
+    transactions.push({ campaignId, txHash, timestamp: new Date().toISOString() });
+    localStorage.setItem('campaign_transactions', JSON.stringify(transactions));
+    
+    // Don't throw the error - allow campaign creation to continue
+  }
+};
 
 const STORAGE_KEY = 'donorspark_campaigns';
 const TESTNET_URL = 'wss://s.altnet.rippletest.net:51233';
 
 // Document number for campaign metadata (using a number > 65535 as per XLS-48d)
 const CAMPAIGN_DOCUMENT_NUMBER = 100000;
-
-interface CampaignMetadata {
-  id: string;
-  organizationAddress: string;
-  title: string;
-  description: string;
-  targetAmount: number;
-  currentAmount: number;
-  endDate: string;
-  category: string;
-  status: 'active' | 'completed' | 'cancelled';
-}
 
 // Sample campaigns data
 const sampleCampaigns: Campaign[] = [
@@ -119,16 +152,71 @@ const stringToHex = (str: string): string => {
     .toUpperCase();
 };
 
+// Helper function to wait for transaction validation on XRPL ledger
+const waitForTransactionValidation = async (txHash: string, maxWaitTime: number = 30000): Promise<any> => {
+  const client = new Client(TESTNET_URL, {
+    connectionTimeout: 10000,
+    timeout: 20000
+  });
+
+  try {
+    console.log('Connecting to XRPL to check transaction validation...');
+    await client.connect();
+    
+    const startTime = Date.now();
+    const pollInterval = 2000; // Check every 2 seconds
+    
+    while (Date.now() - startTime < maxWaitTime) {
+      try {
+        console.log(`Checking transaction validation for hash: ${txHash}`);
+        
+        // Get transaction details from ledger
+        const txResponse = await client.request({
+          command: 'tx',
+          transaction: txHash
+        });
+        
+        if (txResponse.result) {
+          console.log('Transaction found on ledger:', {
+            hash: txResponse.result.hash,
+            validated: txResponse.result.validated,
+            ledger_index: txResponse.result.ledger_index,
+            meta: txResponse.result.meta ? 'present' : 'missing'
+          });
+          
+          // If transaction is validated, return success
+          if (txResponse.result.validated) {
+            return {
+              validated: true,
+              transaction: txResponse.result
+            };
+          }
+        }
+      } catch (error) {
+        // Transaction might not be found yet, continue polling
+        console.log('Transaction not found yet, continuing to poll...');
+      }
+      
+      // Wait before next poll
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
+    }
+    
+    // Timeout reached
+    throw new Error(`Transaction validation timeout after ${maxWaitTime}ms`);
+    
+  } finally {
+    if (client.isConnected()) {
+      await client.disconnect();
+      console.log('Disconnected from XRPL validation check');
+    }
+  }
+};
+
 // Helper function to generate a new XRPL wallet
 const generateCampaignWallet = async (): Promise<{ address: string; seed: string }> => {
   const client = new Client(TESTNET_URL, {
     connectionTimeout: 10000,
-    timeout: 20000,
-    retry: {
-      maxAttempts: 3,
-      minDelay: 1000,
-      maxDelay: 5000
-    }
+    timeout: 20000
   });
 
   try {
@@ -148,7 +236,7 @@ const generateCampaignWallet = async (): Promise<{ address: string; seed: string
 
     return {
       address: new_wallet.address,
-      seed: new_wallet.seed
+      seed: new_wallet.seed || ''
     };
   } catch (error) {
     console.error('Error generating campaign wallet:', error);
@@ -158,7 +246,7 @@ const generateCampaignWallet = async (): Promise<{ address: string; seed: string
     console.log('Generated offline wallet:', wallet.address);
     return {
       address: wallet.address,
-      seed: wallet.seed
+      seed: wallet.seed || ''
     };
   } finally {
     if (client.isConnected()) {
@@ -270,6 +358,35 @@ export const createCampaign = async (campaignData: Omit<Campaign, 'id' | 'create
       throw new Error(response.error);
     }
 
+    // Wait for transaction validation on ledger before storing in database
+    if (response.result && response.result.hash) {
+      console.log('✅ Transaction submitted with hash:', response.result.hash);
+      console.log('⏳ Waiting for transaction validation on XRPL ledger...');
+      console.log('🔍 This may take 10-30 seconds for the transaction to be mined and validated...');
+      
+      try {
+        // Wait for transaction to be validated on ledger
+        const validatedTransaction = await waitForTransactionValidation(response.result.hash);
+        
+        if (validatedTransaction.validated) {
+          console.log('✅ Transaction validated on ledger!');
+          console.log('💾 Storing campaign and transaction hash in database...');
+          
+          // Now store in database since transaction is confirmed
+          await storeCampaignToDatabase(campaign.id, response.result.hash);
+          console.log('✅ Campaign and transaction hash successfully stored in database');
+        } else {
+          throw new Error('Transaction failed validation on ledger');
+        }
+      } catch (validationError) {
+        console.error('❌ Transaction validation failed:', validationError);
+        
+        // If validation fails, still store locally but don't store in MySQL
+        console.log('⚠️  Storing campaign locally without database confirmation');
+        throw new Error(`Transaction validation failed: ${validationError.message}`);
+      }
+    }
+
     // Store campaign and wallet info in local storage
     const campaigns = await getCampaigns();
     
@@ -318,7 +435,7 @@ export const getCampaignsByOrganization = async (organizationId: string): Promis
   return campaigns.filter(campaign => campaign.organizationId === organizationId);
 };
 
-export const getCampaignsByDonor = async (donorId: string): Promise<Campaign[]> => {
+export const getCampaignsByDonor = async (): Promise<Campaign[]> => {
   // TODO: Implement donor tracking
   return [];
 };

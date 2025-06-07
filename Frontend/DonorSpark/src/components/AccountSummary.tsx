@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { User, Calendar, Download, DollarSign, Target } from 'lucide-react';
 import { getCurrentUser } from '../services/auth';
 import { getCampaignsByDonor } from '../services/campaigns';
-import { Campaign, Donation } from '../types';
-import { Download } from 'lucide-react';
+import { Donation } from '../types';
 
 interface DonationSummary {
   totalAmount: number;
