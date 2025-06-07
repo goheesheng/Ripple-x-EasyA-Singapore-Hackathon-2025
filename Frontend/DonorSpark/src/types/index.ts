@@ -49,31 +49,40 @@ export interface Donation {
 }
 
 // Crossmark types
+export interface CrossmarkTransaction {
+  TransactionType: string;
+  Account: string;
+  Fee: string;
+  Flags: number;
+  // For Payment
+  Destination?: string;
+  Amount?: string;
+  Memos?: any[];
+  // For DocumentSet (legacy, not used)
+  DocumentNumber?: number;
+  Data?: string;
+}
+
+export interface CrossmarkResponse {
+  response: {
+    result: {
+      meta: {
+        TransactionResult: string;
+      };
+      hash: string;
+    };
+  };
+}
+
+export interface Crossmark {
+  methods: {
+    signAndSubmit(transaction: CrossmarkTransaction): Promise<CrossmarkResponse>;
+    signInAndWait(): Promise<{ address: string }>;
+  };
+}
+
 declare global {
   interface Window {
-    crossmark: {
-      methods: {
-        signInAndWait: () => Promise<{
-          response: {
-            data: {
-              address: string;
-            };
-          };
-        }>;
-        signAndSubmit: (tx: {
-          TransactionType: string;
-          DocumentNumber: number;
-          Data: string;
-        }) => Promise<{
-          response: {
-            result: {
-              meta: {
-                TransactionResult: string;
-              };
-            };
-          };
-        }>;
-      };
-    };
+    crossmark: Crossmark;
   }
 } 

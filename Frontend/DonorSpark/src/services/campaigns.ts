@@ -107,13 +107,20 @@ export const getCampaigns = async (): Promise<Campaign[]> => {
   return JSON.parse(campaigns);
 };
 
+// Helper function to convert string to hex
+const stringToHex = (str: string): string => {
+  return Array.from(str)
+    .map(c => c.charCodeAt(0).toString(16).padStart(2, '0'))
+    .join('');
+};
+
 export const createCampaign = async (campaignData: Omit<Campaign, 'id' | 'createdAt' | 'status' | 'currentAmount'>): Promise<Campaign> => {
-  const user = localStorage.getItem('donorspark_user');
+  const user = localStorage.getItem('user');
   if (!user) {
     throw new Error('User must be logged in to create a campaign');
   }
 
-  const { address, type } = JSON.parse(user);
+  const { id: address, type } = JSON.parse(user);
   if (type !== 'organization') {
     throw new Error('Only organizations can create campaigns');
   }
@@ -128,6 +135,13 @@ export const createCampaign = async (campaignData: Omit<Campaign, 'id' | 'create
 
   // Store campaign metadata on-chain
   try {
+    console.log('Preparing campaign metadata...');
+    
+    // First, check if Crossmark is available
+    if (!window.crossmark) {
+      throw new Error('Crossmark extension not found');
+    }
+
     const metadata: CampaignMetadata = {
       id: campaign.id,
       organizationAddress: address,
@@ -140,18 +154,50 @@ export const createCampaign = async (campaignData: Omit<Campaign, 'id' | 'create
       status: campaign.status
     };
 
-    // Convert metadata to hex string (max 256 bytes as per XLS-48d)
-    const metadataHex = Buffer.from(JSON.stringify(metadata)).toString('hex');
+    // Convert to hex and check size limit
+    const metadataJson = JSON.stringify(metadata);
+    const metadataHex = stringToHex(metadataJson).toUpperCase();
     
-    // Create DocumentSet transaction
-    const response = await window.crossmark.methods.signAndSubmit({
-      TransactionType: 'DocumentSet',
-      DocumentNumber: CAMPAIGN_DOCUMENT_NUMBER,
-      Data: metadataHex
-    });
+    console.log('Metadata size:', metadataHex.length / 2, 'bytes');
+    console.log('Metadata hex:', metadataHex);
+    
+    if (metadataHex.length > 2048) { // 1024 bytes = 2048 hex characters (Memo limit)
+      throw new Error('Metadata exceeds 1024 byte Memo limit');
+    }
 
-    if (response.response.result.meta.TransactionResult !== 'tesSUCCESS') {
-      throw new Error('Failed to store campaign metadata on-chain');
+    // Prepare Payment transaction with Memo
+    const transaction = {
+      TransactionType: 'Payment',
+      Account: address,
+      Destination: address, // self-payment
+      Amount: '1', // 1 drop
+      Fee: '12',
+      Flags: 0,
+      Memos: [
+        {
+          Memo: {
+            MemoType: stringToHex('Campaign').toUpperCase(),
+            MemoData: metadataHex,
+          }
+        }
+      ]
+    };
+
+    console.log('Submitting transaction:', transaction);
+    
+    // Sign and submit the transaction
+    const response = await window.crossmark.methods.signAndSubmit(transaction);
+    console.log('Transaction response:', response);
+    
+    // Check if transaction was successful
+    if (response && response.response && response.response.result) {
+      const result = response.response.result;
+      if (result.meta && result.meta.TransactionResult !== 'tesSUCCESS') {
+        throw new Error(`Transaction failed: ${result.meta.TransactionResult}`);
+      }
+      console.log('Transaction successful:', result.hash);
+    } else {
+      throw new Error('Invalid response from Crossmark');
     }
 
     // Store campaign in local storage
@@ -162,7 +208,16 @@ export const createCampaign = async (campaignData: Omit<Campaign, 'id' | 'create
     return campaign;
   } catch (error) {
     console.error('Error storing campaign metadata:', error);
-    throw new Error('Failed to create campaign');
+    
+    // Still create campaign locally even if on-chain storage fails
+    const campaigns = await getCampaigns();
+    campaigns.push(campaign);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(campaigns));
+    
+    if (error instanceof Error) {
+      throw new Error(`Campaign created locally but on-chain storage failed: ${error.message}`);
+    }
+    throw new Error('Campaign created locally but on-chain storage failed');
   }
 };
 

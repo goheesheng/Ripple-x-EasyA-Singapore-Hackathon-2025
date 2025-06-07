@@ -1,22 +1,6 @@
 // import sdk from '@crossmarkio/sdk';
 import { User, Donor, Organization } from '../types';
-
-// Declare Crossmark types
-declare global {
-  interface Window {
-    crossmark: {
-      methods: {
-        signInAndWait: () => Promise<{
-          response: {
-            data: {
-              address: string;
-            };
-          };
-        }>;
-      };
-    };
-  }
-}
+import { Crossmark } from '../types';
 
 // Mock user type mapping (in a real app, this would be stored in a database)
 const userTypeMap: Record<string, 'donor' | 'organization'> = {};
@@ -62,11 +46,10 @@ export const signInWithCrossmark = async (): Promise<User | null> => {
     }
 
     // Try to sign in
-    const { response } = await window.crossmark.methods.signInAndWait();
-    if (!response?.data?.address) {
+    const { address } = await window.crossmark.methods.signInAndWait();
+    if (!address) {
       throw new Error('Failed to get address from Crossmark');
     }
-    const address = response.data.address;
     const userType = getUserType(address);
 
     // Create the appropriate user type

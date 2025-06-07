@@ -57,8 +57,15 @@ const CreateCampaign = () => {
       }
 
       const user = getCurrentUser();
+      console.log('Current user:', user);
+      console.log('Local storage user:', localStorage.getItem('user'));
+      
       if (!user) {
         throw new Error('You must be logged in to create a campaign');
+      }
+
+      if (user.type !== 'organization') {
+        throw new Error('Only organizations can create campaigns');
       }
 
       // Create campaign using the campaigns service
@@ -66,19 +73,22 @@ const CreateCampaign = () => {
         title: formData.title,
         description: formData.description,
         targetAmount: parseFloat(formData.targetAmount),
-        endDate: formData.endDate,
+        endDate: endDate.toISOString(),
         category: formData.category,
         organizationId: user.id,
-        organizationName: formData.organizationName,
-        organizationDescription: formData.organizationDescription,
+        organizationName: formData.organizationName || user.name,
+        organizationDescription: formData.organizationDescription || '',
         image: formData.campaignImage ? URL.createObjectURL(formData.campaignImage) : undefined,
       };
 
-      await createCampaign(campaignData);
+      console.log('Creating campaign with data:', campaignData);
+      const campaign = await createCampaign(campaignData);
+      console.log('Campaign created successfully:', campaign);
 
       // Redirect to campaigns page after successful creation
       navigate('/campaigns');
     } catch (err) {
+      console.error('Error creating campaign:', err);
       setError(err instanceof Error ? err.message : 'Failed to create campaign');
     } finally {
       setIsLoading(false);
