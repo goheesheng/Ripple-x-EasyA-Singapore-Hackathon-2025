@@ -55,3 +55,4 @@ out/
 
 # Virtual Environment
 .venv/
+xrpl/.env
