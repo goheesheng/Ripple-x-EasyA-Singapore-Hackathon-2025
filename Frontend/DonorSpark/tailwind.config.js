@@ -5,7 +5,11 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        'hero-gradient': 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+      },
+    },
   },
   plugins: [],
 }
