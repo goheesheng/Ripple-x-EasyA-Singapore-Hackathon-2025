@@ -1,3 +1,8 @@
+// NOTE: This utility is no longer used in the main TransactionTimer service
+// The timer now reads campaign end dates directly from the MySQL database
+// instead of parsing transaction memos. This file is kept for reference
+// in case memo parsing is needed for other purposes.
+
 export const parseMemo = (memos: any[]): any => {
   let report = {};
   if (memos && memos.length > 0) {

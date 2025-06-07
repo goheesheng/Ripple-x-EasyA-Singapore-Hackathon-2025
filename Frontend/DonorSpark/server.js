@@ -391,6 +391,43 @@ app.patch('/api/campaigns/:campaignId/amount', async (req, res) => {
   }
 });
 
+// Update campaign status
+app.patch('/api/campaigns/:campaignId/status', async (req, res) => {
+  try {
+    if (!pool) {
+      return res.status(503).json({ error: 'Database not initialized' });
+    }
+    
+    const { campaignId } = req.params;
+    const { status } = req.body;
+    
+    if (!status || !['active', 'completed', 'cancelled'].includes(status)) {
+      return res.status(400).json({ error: 'Valid status is required (active, completed, cancelled)' });
+    }
+    
+    const connection = await pool.getConnection();
+    try {
+      const [result] = await connection.execute(`
+        UPDATE campaigns 
+        SET status = ?
+        WHERE id = ?
+      `, [status, campaignId]);
+      
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'Campaign not found' });
+      }
+      
+      console.log(`✅ Campaign ${campaignId} status updated to: ${status}`);
+      res.json({ success: true, message: 'Campaign status updated successfully' });
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.error('Error updating campaign status:', error);
+    res.status(500).json({ error: 'Failed to update campaign status' });
+  }
+});
+
 // Store a donation
 app.post('/api/donations', async (req, res) => {
   try {
