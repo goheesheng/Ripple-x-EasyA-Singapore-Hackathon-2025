@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Heart, Menu, X, User, LogOut, PlusCircle, Gift } from 'lucide-react';
+import { Heart, Menu, X, User, LogOut, PlusCircle, Gift, FileText } from 'lucide-react';
 import { signInWithCrossmark, signOut, getCurrentUser, isOrganization, isDonor } from '../services/auth';
 
 const Header = () => {
@@ -100,14 +100,24 @@ const Header = () => {
                       </>
                     )}
                     {isDonor() && (
-                      <Link
-                        to="/my-donations"
-                        className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:bg-gray-100"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        <Gift className="h-5 w-5" />
-                        <span>My Donations</span>
-                      </Link>
+                      <>
+                        <Link
+                          to="/my-donations"
+                          className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:bg-gray-100"
+                          onClick={() => setShowUserMenu(false)}
+                        >
+                          <Gift className="h-5 w-5" />
+                          <span>My Donations</span>
+                        </Link>
+                        <Link
+                          to="/account-summary"
+                          className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:bg-gray-100"
+                          onClick={() => setShowUserMenu(false)}
+                        >
+                          <FileText className="h-5 w-5" />
+                          <span>Account Summary</span>
+                        </Link>
+                      </>
                     )}
                     <button
                       onClick={handleSignOut}
@@ -183,6 +193,46 @@ const Header = () => {
                 <div className="text-sm text-gray-500">
                   {user.type === 'organization' ? 'Organization Account' : 'Donor Account'}
                 </div>
+                {isOrganization() && (
+                  <>
+                    <Link
+                      to="/create-campaign"
+                      className="flex items-center space-x-2 text-gray-600 hover:text-indigo-600 transition-colors"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <PlusCircle className="h-5 w-5" />
+                      <span>Create Campaign</span>
+                    </Link>
+                    <Link
+                      to="/my-campaigns"
+                      className="flex items-center space-x-2 text-gray-600 hover:text-indigo-600 transition-colors"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <Gift className="h-5 w-5" />
+                      <span>My Campaigns</span>
+                    </Link>
+                  </>
+                )}
+                {isDonor() && (
+                  <>
+                    <Link
+                      to="/my-donations"
+                      className="flex items-center space-x-2 text-gray-600 hover:text-indigo-600 transition-colors"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <Gift className="h-5 w-5" />
+                      <span>My Donations</span>
+                    </Link>
+                    <Link
+                      to="/account-summary"
+                      className="flex items-center space-x-2 text-gray-600 hover:text-indigo-600 transition-colors"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <FileText className="h-5 w-5" />
+                      <span>Account Summary</span>
+                    </Link>
+                  </>
+                )}
                 <button
                   onClick={() => {
                     handleSignOut();

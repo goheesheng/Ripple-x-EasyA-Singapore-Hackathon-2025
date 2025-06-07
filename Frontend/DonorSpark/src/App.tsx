@@ -13,6 +13,7 @@ import Testimonials from './components/Testimonials';
 import CreateCampaign from './components/CreateCampaign';
 import CampaignList from './components/CampaignList';
 import { signInWithCrossmark, isAuthenticated, isOrganization, getCurrentUser } from './services/auth';
+import AccountSummary from './components/AccountSummary';
 
 // Impact statistics
 const impactStats = [
@@ -123,6 +124,7 @@ export function App() {
         <Route path="/campaigns" element={<CampaignList />} />
         <Route path="/my-campaigns" element={<CampaignList showOnlyMyCampaigns />} />
         <Route path="/my-donations" element={<CampaignList showOnlyMyDonations />} />
+        <Route path="/account-summary" element={<AccountSummary />} />
         <Route path="/" element={
           <>
             {/* Hero Section */}
