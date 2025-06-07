@@ -1,130 +1,145 @@
-import { Client } from "xrpl";
-import { parseMemo } from "../utils/parseMemo";
+import mysql from 'mysql2/promise';
 
 export class TransactionTimer {
-  private client: Client;
+  private pool: mysql.Pool;
   private intervalId: NodeJS.Timeout | null = null;
-  private transactionId: string;
-  private targetUtcTime: Date | null = null;
   private isTimeHit: boolean = false;
 
-  constructor(transactionId: string) {
-    this.client = new Client("wss://s.altnet.rippletest.net:51233"); // Testnet
-    this.transactionId = transactionId;
+  constructor() {
+    // Create MySQL connection pool
+    this.pool = mysql.createPool({
+      host: 'localhost',
+      user: 'root',
+      password: 'root',
+      database: 'donorspark',
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0
+    });
   }
 
-  private async connectClient(): Promise<void> {
-    if (!this.client.isConnected()) {
-      await this.client.connect();
-      console.log("Connected to XRPL testnet");
-    }
-  }
-
-  private async disconnectClient(): Promise<void> {
-    if (this.client.isConnected()) {
-      await this.client.disconnect();
-      console.log("Disconnected from XRPL testnet");
-    }
-  }
-
-  private async fetchTransactionMemo(): Promise<any> {
+  private async getCampaignsReachedEndDate(): Promise<any[]> {
     try {
-      await this.connectClient();
-      
-      const response = await this.client.request({
-        command: "tx",
-        transaction: this.transactionId
-      });
-
-      if (response.result && response.result.Memos) {
-        const parsedMemo = parseMemo(response.result.Memos);
-        console.log("Parsed memo data:", parsedMemo);
-        return parsedMemo;
-      } else {
-        console.log("No memos found in transaction:", this.transactionId);
-        return null;
+      const connection = await this.pool.getConnection();
+      try {
+        const [rows] = await connection.execute(`
+          SELECT 
+            id, 
+            title, 
+            campaign_wallet_address, 
+            end_date,
+            status,
+            DATE_FORMAT(end_date, '%Y-%m-%dT%H:%i:%s.000Z') as endDateISO
+          FROM campaigns 
+          WHERE end_date <= NOW() 
+          AND status = 'active'
+          AND campaign_wallet_address IS NOT NULL
+          ORDER BY end_date ASC
+        `);
+        
+        return rows as any[];
+      } finally {
+        connection.release();
       }
     } catch (error) {
-      console.error("Error fetching transaction:", error);
+      console.error("Error fetching campaigns from database:", error);
+      return [];
+    }
+  }
+
+  private async getWalletSeed(publicAddress: string): Promise<string | null> {
+    try {
+      const connection = await this.pool.getConnection();
+      try {
+        const [rows] = await connection.execute(
+          'SELECT seed FROM wallets WHERE public_address = ?',
+          [publicAddress]
+        );
+        
+        const walletRows = rows as any[];
+        if (walletRows.length > 0) {
+          return walletRows[0].seed;
+        }
+        return null;
+      } finally {
+        connection.release();
+      }
+    } catch (error) {
+      console.error("Error fetching wallet seed:", error);
       return null;
     }
   }
 
-  private parseUtcTimeFromMemo(memoData: any): Date | null {
-    // Look for common UTC time field names in the memo, prioritizing end_date
-    const timeFields = ['end_date', 'utcTime', 'targetTime', 'scheduledTime', 'executeAt', 'timestamp'];
-    
-    for (const field of timeFields) {
-      if (memoData[field]) {
-        try {
-          const date = new Date(memoData[field]);
-          if (!isNaN(date.getTime())) {
-            return date;
-          }
-        } catch (error) {
-          console.log(`Error parsing date from field ${field}:`, error);
-        }
-      }
-    }
-
-    // If no specific field found, check if there's a direct timestamp or date string
-    if (typeof memoData === 'string') {
+  private async updateCampaignStatus(campaignId: string, status: string): Promise<void> {
+    try {
+      const connection = await this.pool.getConnection();
       try {
-        const date = new Date(memoData);
-        if (!isNaN(date.getTime())) {
-          return date;
-        }
-      } catch (error) {
-        console.log("Error parsing memo data as date:", error);
+        await connection.execute(
+          'UPDATE campaigns SET status = ? WHERE id = ?',
+          [status, campaignId]
+        );
+        console.log(`✅ Campaign ${campaignId} status updated to: ${status}`);
+      } finally {
+        connection.release();
       }
+    } catch (error) {
+      console.error("Error updating campaign status:", error);
     }
-
-    return null;
   }
 
   private async checkTimeCondition(): Promise<void> {
-    console.log(`[${new Date().toISOString()}] Checking transaction memo...`);
+    console.log(`[${new Date().toISOString()}] Checking campaigns that have reached end_date...`);
     
-    const memoData = await this.fetchTransactionMemo();
+    const expiredCampaigns = await this.getCampaignsReachedEndDate();
     
-    if (!memoData) {
-      console.log("No memo data found, skipping time check");
+    if (expiredCampaigns.length === 0) {
+      console.log("No campaigns have reached their end_date yet");
       return;
     }
 
-    // If we haven't parsed the target time yet, try to parse it
-    if (!this.targetUtcTime) {
-      this.targetUtcTime = this.parseUtcTimeFromMemo(memoData);
-      
-      if (this.targetUtcTime) {
-        console.log(`Target UTC time found: ${this.targetUtcTime.toISOString()}`);
-      } else {
-        console.log("Could not parse UTC time from memo data");
-        console.log("Memo data:", memoData);
-        return;
-      }
-    }
-
-    // Check if current UTC time has met or exceeded the target time
-    const currentUtcTime = new Date();
+    console.log(`🎯 Found ${expiredCampaigns.length} campaign(s) that have reached their end_date!`);
     
-    if (currentUtcTime >= this.targetUtcTime && !this.isTimeHit) {
-      this.isTimeHit = true;
-      console.log("🎯 TIME HIT! The UTC time condition has been met!");
-      console.log(`Target time: ${this.targetUtcTime.toISOString()}`);
-      console.log(`Current time: ${currentUtcTime.toISOString()}`);
-      console.log(`Transaction ID: ${this.transactionId}`);
+    for (const campaign of expiredCampaigns) {
+      console.log("=".repeat(50));
+      console.log(`🎯 TIME HIT! Campaign has reached end_date!`);
+      console.log(`Campaign ID: ${campaign.id}`);
+      console.log(`Campaign Title: ${campaign.title}`);
+      console.log(`End Date: ${campaign.endDateISO}`);
+      console.log(`Current Time: ${new Date().toISOString()}`);
+      console.log(`Campaign Wallet Address: ${campaign.campaign_wallet_address}`);
       
-      // You can add additional logic here when the time is hit
-      // For example, trigger other processes, send notifications, etc.
-    } else if (!this.isTimeHit) {
-      const timeRemaining = this.targetUtcTime.getTime() - currentUtcTime.getTime();
-      console.log(`Time remaining: ${Math.max(0, Math.floor(timeRemaining / 1000))} seconds`);
+      // Get wallet seed for this campaign
+      const walletSeed = await this.getWalletSeed(campaign.campaign_wallet_address);
+      
+      if (walletSeed) {
+        console.log(`✅ Found wallet seed for campaign ${campaign.id}`);
+        console.log(`Wallet Address: ${campaign.campaign_wallet_address}`);
+        console.log(`Seed Length: ${walletSeed.length} characters`);
+        
+        // Here you can trigger the swap functionality
+        // For now, we'll just log the information needed for the swap
+        console.log("🔄 Ready to perform SGD to RLUSD swap:");
+        console.log(`- Source Wallet: ${campaign.campaign_wallet_address}`);
+        console.log(`- Wallet Seed: ${walletSeed.substring(0, 10)}...`);
+        console.log(`- Destination: rh6UCKiPqqpSnSGfWz1wA9ZSu9j5FFLGVN`);
+        
+        // Update campaign status to completed
+        await this.updateCampaignStatus(campaign.id, 'completed');
+        
+        // Return the wallet information for external use
+        this.onCampaignExpired?.(campaign.campaign_wallet_address, walletSeed);
+        
+      } else {
+        console.log(`❌ No wallet seed found for campaign ${campaign.id} with address ${campaign.campaign_wallet_address}`);
+      }
     }
   }
 
+  // Callback function that can be set externally to handle expired campaigns
+  public onCampaignExpired?: (walletAddress: string, walletSeed: string) => void;
+
   public startTimer(intervalMinutes: number = 1): void {
-    console.log(`Starting timer to check transaction ${this.transactionId} every ${intervalMinutes} minute(s)`);
+    console.log(`Starting timer to check campaigns every ${intervalMinutes} minute(s)`);
     
     // Run initial check
     this.checkTimeCondition();
@@ -141,20 +156,22 @@ export class TransactionTimer {
       this.intervalId = null;
       console.log("Timer stopped");
     }
-    this.disconnectClient();
+    this.pool.end();
   }
 
-  public async getTransactionDetails(): Promise<any> {
+  public async testDatabaseConnection(): Promise<boolean> {
     try {
-      await this.connectClient();
-      const response = await this.client.request({
-        command: "tx",
-        transaction: this.transactionId
-      });
-      return response.result;
+      const connection = await this.pool.getConnection();
+      try {
+        await connection.execute('SELECT 1');
+        console.log("✅ Database connection successful");
+        return true;
+      } finally {
+        connection.release();
+      }
     } catch (error) {
-      console.error("Error fetching transaction details:", error);
-      return null;
+      console.error("❌ Database connection failed:", error);
+      return false;
     }
   }
 }

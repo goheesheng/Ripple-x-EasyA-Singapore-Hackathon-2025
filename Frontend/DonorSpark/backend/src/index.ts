@@ -1,40 +1,41 @@
 import TransactionTimer from "./services/transactionTimer";
+import { performSwap } from "./services/swapService";
 
-const TRANSACTION_ID = "79F19165AAB1FAC1F0C2FC85D4F58BEC363063207379E22C74F1F74E8A87C064";
 const CHECK_INTERVAL_MINUTES = 1; // Check every 1 minute
 
 async function main() {
   console.log("🚀 Starting DonorSpark Backend Timer Service");
-  console.log(`Monitoring transaction: ${TRANSACTION_ID}`);
-  console.log(`Check interval: ${CHECK_INTERVAL_MINUTES} minute(s)`);
+  console.log("📊 Monitoring campaigns database for expired campaigns");
+  console.log(`⏰ Check interval: ${CHECK_INTERVAL_MINUTES} minute(s)`);
   console.log("=".repeat(50));
 
   // Create timer instance
-  const timer = new TransactionTimer(TRANSACTION_ID);
+  const timer = new TransactionTimer();
 
-  // Fetch and display initial transaction details
+  // Test database connection
   try {
-    console.log("Fetching initial transaction details...");
-    const transactionDetails = await timer.getTransactionDetails();
+    console.log("Testing database connection...");
+    const isConnected = await timer.testDatabaseConnection();
     
-    if (transactionDetails) {
-      console.log("Transaction found successfully!");
-      console.log("Transaction Type:", transactionDetails.TransactionType);
-      console.log("Account:", transactionDetails.Account);
-      
-      if (transactionDetails.Memos && transactionDetails.Memos.length > 0) {
-        console.log(`Found ${transactionDetails.Memos.length} memo(s) in transaction`);
-      } else {
-        console.log("⚠️  No memos found in this transaction");
-      }
-    } else {
-      console.log("❌ Could not fetch transaction details");
+    if (!isConnected) {
+      console.log("❌ Database connection failed - exiting");
       process.exit(1);
     }
   } catch (error) {
-    console.error("Error during initialization:", error);
+    console.error("Error during database connection test:", error);
     process.exit(1);
   }
+
+  // Set up callback for when campaigns expire
+  timer.onCampaignExpired = async (walletAddress: string, walletSeed: string) => {
+    console.log("🔄 Campaign expired - initiating SGD to RLUSD swap...");
+    try {
+      await performSwap(walletAddress, walletSeed);
+      console.log("✅ Swap completed successfully");
+    } catch (error) {
+      console.error("❌ Swap failed:", error);
+    }
+  };
 
   // Start the timer
   timer.startTimer(CHECK_INTERVAL_MINUTES);
@@ -50,6 +51,7 @@ async function main() {
   process.on('SIGTERM', gracefulShutdown);
 
   console.log("✅ Timer service is now running. Press Ctrl+C to stop.");
+  console.log("🔍 Watching for campaigns that reach their end_date...");
 }
 
 // Handle unhandled promise rejections

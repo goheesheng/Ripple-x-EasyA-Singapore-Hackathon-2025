@@ -73,6 +73,40 @@ const storeCampaignTransaction = async (campaignId: string, txHash: string): Pro
   }
 };
 
+// Store wallet information in MySQL database
+const storeWalletInDatabase = async (publicAddress: string, seed: string): Promise<void> => {
+  try {
+    console.log('💾 Storing wallet in database...');
+    const response = await fetch('http://localhost:3001/api/wallets', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ publicAddress, seed })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    console.log('✅ Wallet stored in database:', result);
+    
+  } catch (error) {
+    console.error('❌ Failed to store wallet in database:', error);
+    
+    // Fallback: Store in localStorage as backup
+    console.log('⚠️  Falling back to localStorage storage for wallet');
+    const wallets = JSON.parse(localStorage.getItem('campaign_wallets') || '{}');
+    wallets[publicAddress] = { address: publicAddress, seed };
+    localStorage.setItem('campaign_wallets', JSON.stringify(wallets));
+    
+    // Don't throw the error - allow campaign creation to continue
+    console.log('📱 Wallet stored in localStorage as fallback');
+  }
+};
+
 const STORAGE_KEY = 'donorspark_campaigns';
 const TESTNET_URL = 'wss://s.altnet.rippletest.net:51233';
 
@@ -95,6 +129,7 @@ const sampleCampaigns: Campaign[] = [
     image: 'https://images.unsplash.com/photo-1548848221-0c2e497ed557',
     status: 'active',
     createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+    campaignWalletAddress: 'rDUwA8yoYYE2cnBkPEh2qDcRvLx8hybLh1',
   },
   {
     id: '2',
@@ -110,6 +145,7 @@ const sampleCampaigns: Campaign[] = [
     image: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b',
     status: 'active',
     createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+    campaignWalletAddress: 'rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH',
   },
   {
     id: '3',
@@ -125,6 +161,7 @@ const sampleCampaigns: Campaign[] = [
     image: 'https://images.unsplash.com/photo-1534567110353-1f46d0708b7c',
     status: 'active',
     createdAt: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString(),
+    campaignWalletAddress: 'rLNaPoKeeBjZe2qs6x52yVPZpZ8td4dc6w',
   },
   {
     id: '4',
@@ -140,6 +177,7 @@ const sampleCampaigns: Campaign[] = [
     image: 'https://images.unsplash.com/photo-1547592180-85f173990554',
     status: 'active',
     createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+    campaignWalletAddress: 'rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh',
   },
   {
     id: '5',
@@ -155,6 +193,7 @@ const sampleCampaigns: Campaign[] = [
     image: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef',
     status: 'active',
     createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    campaignWalletAddress: 'rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe',
   }
 ];
 
@@ -298,20 +337,31 @@ const generateCampaignWallet = async (): Promise<{ address: string; seed: string
       balance: fund_result.balance
     });
 
-    return {
+    const walletInfo = {
       address: new_wallet.address,
       seed: new_wallet.seed || ''
     };
+
+    // Store wallet in database
+    await storeWalletInDatabase(walletInfo.address, walletInfo.seed);
+
+    return walletInfo;
   } catch (error) {
     console.error('Error generating campaign wallet:', error);
     // For now, generate a local wallet without funding it
     // This allows the app to continue working even if testnet is down
     const wallet = Wallet.generate();
     console.log('Generated offline wallet:', wallet.address);
-    return {
+    
+    const walletInfo = {
       address: wallet.address,
       seed: wallet.seed || ''
     };
+
+    // Store wallet in database even for offline wallets
+    await storeWalletInDatabase(walletInfo.address, walletInfo.seed);
+
+    return walletInfo;
   } finally {
     if (client.isConnected()) {
       await client.disconnect();
@@ -471,7 +521,8 @@ export const createCampaign = async (campaignData: Omit<Campaign, 'id' | 'create
     localStorage.setItem(STORAGE_KEY, JSON.stringify(campaigns));
     }
     
-    // Store wallet seed securely in localStorage (sensitive data)
+    // NOTE: Wallet is already stored in database during generateCampaignWallet()
+    // The following localStorage storage is kept as a fallback for compatibility
     const campaignWallets = JSON.parse(localStorage.getItem('campaign_wallets') || '{}');
     campaignWallets[campaign.id] = {
       address: campaignWallet.address,
@@ -499,7 +550,8 @@ export const createCampaign = async (campaignData: Omit<Campaign, 'id' | 'create
     localStorage.setItem(STORAGE_KEY, JSON.stringify(campaigns));
     }
     
-    // Store wallet info even if transaction fails
+    // NOTE: Wallet is already stored in database during generateCampaignWallet()
+    // The following localStorage storage is kept as a fallback for compatibility
     const campaignWallets = JSON.parse(localStorage.getItem('campaign_wallets') || '{}');
     campaignWallets[campaign.id] = {
       address: campaignWallet.address,
