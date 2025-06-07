@@ -4,7 +4,7 @@ const TESTNET_JSON_RPC = "wss://s.altnet.rippletest.net:51233"
 const SGD_ISSUER = "rh6UCKiPqqpSnSGfWz1wA9ZSu9j5FFLGVN"
 const RLUSD_ISSUER = "rQhWct2fv4Vc4KRjRgMrxa8xPN9Zx9iLKV"
 const RLUSD_HEX = "524C555344000000000000000000000000000000" // RLUSD in hex
-const DESTINATION_ADDRESS = "rh6UCKiPqqpSnSGfWz1wA9ZSu9j5FFLGVN"
+const DESTINATION_ADDRESS = "raPeFkekHdpKkSEavQfu7C8iQstFX9EtDA"
 const BACKEND_API_URL = "http://localhost:3001/api"
 
 interface CampaignWalletInfo {
