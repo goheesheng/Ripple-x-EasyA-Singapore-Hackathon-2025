@@ -24,11 +24,6 @@ A decentralized donation matching platform built on the **XRP Ledger (XRPL)** us
 - 🏦 **Seamless off-ramp** via RLUSD → USDT → CEX withdrawal  
 - 🧾 **Charity dashboard** (planned) with SGD payout receipts  
 
-## 🌐 How to Int
- - python3 -m venv .venv
- - source .venv/bin/activate
- - pip3 -r requirements.txt
-
 ## 📦 How It Works
 
 ### 1. Donor Verification  
@@ -72,8 +67,14 @@ git clone https://github.com/goheesheng/Ripple-x-EasyA-Singapore-Hackathon-2025/
 ```
 
 ### 2. Setup Instructions
-
-*Coming soon...*
+For Mac!!! (bash woohoo)
+- python3 -m venv .venv
+- source .venv/bin/activate
+- pip3 -r requirements.txt
+For Windows (Powershell L bro)
+- python -m venv .venv
+- .venv\Scripts\activate.bat
+- pip3 -r requirements.txt
 
 ## 📝 License
 
