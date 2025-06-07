@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Building2, Calendar, DollarSign, FileText, Tag } from 'lucide-react';
+import { createCampaign } from '../services/campaigns';
+import { getCurrentUser } from '../services/auth';
+import { Campaign } from '../types/index';
 
 const CreateCampaign = () => {
   const navigate = useNavigate();
@@ -21,8 +24,8 @@ const CreateCampaign = () => {
 
   useEffect(() => {
     // Check if user is logged in and is an organization
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    if (!user.email || user.type !== 'organization') {
+    const user = getCurrentUser();
+    if (!user || user.type !== 'organization') {
       navigate('/');
     }
   }, [navigate]);
@@ -53,11 +56,25 @@ const CreateCampaign = () => {
         throw new Error('End date must be in the future');
       }
 
-      // TODO: Implement campaign creation logic with backend
-      console.log('Campaign data:', formData);
+      const user = getCurrentUser();
+      if (!user) {
+        throw new Error('You must be logged in to create a campaign');
+      }
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Create campaign using the campaigns service
+      const campaignData = {
+        title: formData.title,
+        description: formData.description,
+        targetAmount: parseFloat(formData.targetAmount),
+        endDate: formData.endDate,
+        category: formData.category,
+        organizationId: user.id,
+        organizationName: formData.organizationName,
+        organizationDescription: formData.organizationDescription,
+        image: formData.campaignImage ? URL.createObjectURL(formData.campaignImage) : undefined,
+      };
+
+      await createCampaign(campaignData);
 
       // Redirect to campaigns page after successful creation
       navigate('/campaigns');

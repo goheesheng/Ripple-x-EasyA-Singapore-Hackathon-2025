@@ -2,8 +2,10 @@ import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Slider from 'react-slick';
 import { Quote, Star } from 'lucide-react';
+import 'slick-carousel/slick/slick.css';
+import 'slick-carousel/slick/slick-theme.css';
 
-// Import slick carousel CSS (will be loaded in the component)
+// Testimonials data
 const testimonials = [
   {
     id: 1,
@@ -32,26 +34,6 @@ const testimonials = [
 ];
 
 export default function Testimonials() {
-  // Load slick carousel CSS
-  useEffect(() => {
-    const linkSlick = document.createElement('link');
-    linkSlick.rel = 'stylesheet';
-    linkSlick.type = 'text/css';
-    linkSlick.href = 'https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.8.1/slick.min.css';
-    document.head.appendChild(linkSlick);
-
-    const linkSlickTheme = document.createElement('link');
-    linkSlickTheme.rel = 'stylesheet';
-    linkSlickTheme.type = 'text/css';
-    linkSlickTheme.href = 'https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.8.1/slick-theme.min.css';
-    document.head.appendChild(linkSlickTheme);
-
-    return () => {
-      document.head.removeChild(linkSlick);
-      document.head.removeChild(linkSlickTheme);
-    };
-  }, []);
-
   const settings = {
     dots: true,
     infinite: true,

@@ -105,6 +105,9 @@ export function App() {
       
       <Routes>
         <Route path="/create-campaign" element={<CreateCampaign />} />
+        <Route path="/campaigns" element={<CampaignList />} />
+        <Route path="/my-campaigns" element={<CampaignList showOnlyMyCampaigns />} />
+        <Route path="/my-donations" element={<CampaignList showOnlyMyDonations />} />
         <Route path="/" element={
           <>
             {/* Hero Section */}

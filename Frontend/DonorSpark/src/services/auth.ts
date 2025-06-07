@@ -1,8 +1,22 @@
 // import sdk from '@crossmarkio/sdk';
 import { User, Donor, Organization } from '../types';
 
-// Use window.crossmark instead
-const sdk = (window as any).crossmark;
+// Declare Crossmark types
+declare global {
+  interface Window {
+    crossmark: {
+      methods: {
+        signInAndWait: () => Promise<{
+          response: {
+            data: {
+              address: string;
+            };
+          };
+        }>;
+      };
+    };
+  }
+}
 
 // Mock user type mapping (in a real app, this would be stored in a database)
 const userTypeMap: Record<string, 'donor' | 'organization'> = {};
@@ -21,6 +35,7 @@ const createDonor = (address: string): Donor => ({
   createdAt: new Date().toISOString(),
   totalDonations: 0,
   campaignsSupported: [],
+  walletAddress: address,
 });
 
 // Create an organization user
@@ -33,19 +48,21 @@ const createOrganization = (address: string): Organization => ({
   description: 'A charitable organization making a difference',
   campaignsCreated: [],
   totalRaised: 0,
+  walletAddress: address,
+  verified: false, // New organizations start as unverified
 });
 
 // Sign in with Crossmark
 export const signInWithCrossmark = async (): Promise<User | null> => {
   try {
     // Check if Crossmark is available
-    if (!sdk) {
+    if (typeof window === 'undefined' || !window.crossmark) {
       window.open('https://crossmark.io', '_blank');
       throw new Error('Crossmark is not installed. Please install it from crossmark.io');
     }
 
     // Try to sign in
-    const { response } = await sdk.methods.signInAndWait();
+    const { response } = await window.crossmark.methods.signInAndWait();
     if (!response?.data?.address) {
       throw new Error('Failed to get address from Crossmark');
     }

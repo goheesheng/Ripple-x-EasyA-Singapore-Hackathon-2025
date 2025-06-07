@@ -3,20 +3,22 @@ export interface User {
   email: string;
   name: string;
   type: 'donor' | 'organization';
+  description?: string;
   createdAt: string;
+  walletAddress: string;
 }
 
 export interface Donor extends User {
   type: 'donor';
-  walletAddress?: string;
-  donations: string[]; // Array of campaign IDs
+  totalDonations: number;
+  campaignsSupported: string[]; // Array of campaign IDs
 }
 
 export interface Organization extends User {
   type: 'organization';
-  website?: string;
   description: string;
-  campaigns: string[]; // Array of campaign IDs
+  campaignsCreated: string[]; // Array of campaign IDs
+  totalRaised: number;
   verified: boolean;
 }
 
@@ -30,6 +32,7 @@ export interface Campaign {
   category: string;
   organizationId: string;
   organizationName: string;
+  organizationDescription?: string;
   image?: string;
   status: 'active' | 'completed' | 'cancelled';
   createdAt: string;
@@ -42,4 +45,35 @@ export interface Donation {
   amount: number;
   message?: string;
   createdAt: string;
+  status: 'pending' | 'completed' | 'failed';
+}
+
+// Crossmark types
+declare global {
+  interface Window {
+    crossmark: {
+      methods: {
+        signInAndWait: () => Promise<{
+          response: {
+            data: {
+              address: string;
+            };
+          };
+        }>;
+        signAndSubmit: (tx: {
+          TransactionType: string;
+          DocumentNumber: number;
+          Data: string;
+        }) => Promise<{
+          response: {
+            result: {
+              meta: {
+                TransactionResult: string;
+              };
+            };
+          };
+        }>;
+      };
+    };
+  }
 } 
