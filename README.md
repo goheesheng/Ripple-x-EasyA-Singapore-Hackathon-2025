@@ -1,85 +1,109 @@
-# 🤝 Ripple-Based Verified Donation Platform
+# Ripple-Based Verified Donation Platform
 
-A decentralized donation matching platform built on the **XRP Ledger (XRPL)** using **RLUSD**, with **Fractal ID** for KYC verification and **on-chain DIDs** for identity management. Designed for seamless off-ramp to fiat, making it easy for non-Web3-native charities to receive donations.
+A decentralized donation platform built on the XRP Ledger (XRPL), utilizing RLUSD for stable-value transactions. The system integrates Fractal ID for Know Your Customer (KYC) verification and Decentralized Identifiers (DIDs) for on-chain identity management. It is designed to support fiat off-ramping, enabling traditional charities to securely and transparently receive donations.
 
-## 🔧 Tech Stack
+---
 
-| Component        | Tech                                       |
-|------------------|--------------------------------------------|
-| Blockchain       | XRPL (Testnet or Mainnet)                  |
-| Stablecoin       | RLUSD (Ripple USD stablecoin)             |
-| Identity Layer   | Fractal ID + DIDs stored via IPFS          |
-| DID Storage      | IPFS + XRPL account fields (Domain/Memo)  |
-| Matching Logic   | XRPL Hooks or backend trigger              |
-| Off-Ramp         | RLUSD → USDT → CEX withdrawal (manual/auto) |
-| Backend          | Python (Flask + FastAPI), MongoDB optional |
-| Frontend         | React + WalletConnect or XUMM SDK          |
+## Tech Stack
 
-## 🌐 Features
+### Frontend
+- React.js (with TypeScript)
+- TailwindCSS
+- Crossmark (XRPL wallet browser extension)
 
-- 🔐 **Fractal KYC integration** to verify donor identities  
-- 🪪 **On-chain DIDs** mapped to XRPL wallets  
-- 💸 **RLUSD donations** to smart campaign wallets  
-- 🔁 **Automatic donation matching** for verified users  
-- 🏦 **Seamless off-ramp** via RLUSD → USDT → CEX withdrawal  
-- 🧾 **Charity dashboard** (planned) with SGD payout receipts  
+### Backend
+- Node.js
+- Express.js
+- MySQL (for campaign and user metadata)
 
-## 📦 How It Works
+### Blockchain
+- XRPL (XRP Ledger)
+- XRPL.js (JavaScript SDK for XRPL interaction)
+- RLUSD (Ripple's USD-pegged stablecoin)
 
-### 1. Donor Verification  
-- Donor connects XRPL wallet  
-- Completes KYC via Fractal ID  
-- DID is created and uploaded to IPFS  
-- CID is stored on XRPL (`Domain` field)  
+### Development Tools & Environment
+- TypeScript
+- npm (Node Package Manager)
+- Git (Version Control)
 
-### 2. Donation Flow  
-- Donor sends RLUSD to a campaign wallet  
-- Hook or backend matches donation (if verified)  
-- Campaign wallet tracks donations on-chain  
+---
 
-### 3. Payout to Charity  
-- When goal met or deadline hit:  
-  - RLUSD is swapped to USDT on XRPL DEX  
-  - USDT sent to centralized wallet  
-  - SGD manually or automatically withdrawn to charity bank  
+## Features
 
-## 📁 Project Structure
+- Identity verification using Fractal ID
+- DID generation and on-chain storage via XRPL
+- RLUSD-based donation mechanism
+- On-chain transparency of donation flows
+- Planned dashboard for charities 
+- Payout receipts for donors to be able to view tax reliefs
 
-```
-├── backend/
-│   ├── app.py              # Flask webhook for Fractal + DID builder
-│   ├── did_generator.py    # Generates DID document from KYC
-│   └── ipfs.py            # Uploads to IPFS via Web3.storage
-├── frontend/
-│   ├── components/         # React components (Wallet, KYC)
-│   └── pages/             # Main app logic
-├── xrpl/
-│   ├── writer.py          # Writes DID CID to XRPL Domain
-│   └── matcher.py         # Handles donation matching logic
-```
+---
 
-## 🚀 Quick Start
+## System Overview
 
-### 1. Clone Repository
+### 1. Donor Verification
+- Donor connects an XRPL-compatible wallet using Crossmark
 
+### 2. Donation Process
+- Donor chooses a cause to donate to
+- Donor sends RLUSD to a designated campaign wallet
+- All donations are recorded and visible on-chain
+
+### 3. Payout Process
+- Upon reaching a campaign goal OR deadline:
+  - RLUSD is exchanged for XSGD on XRPL DEX
+  - XSGD is transferred to a payment provider
+  - XSGD is converted to Fiat currency and withdrawn to the charity’s local bank account
+
+---
+
+## Project Structure
+RIPPLE-X-EASYA-SINGAPORE-HACKATHON-2025-1
+├── Frontend/
+│   └── DonorSpark/               # React frontend application
+├── routes/                       # Express route handlers
+├── services/                     # Backend service logic
+├── node_modules/                 # Node.js dependencies
+├── xrpl/                         # XRPL interaction logic
+├── XRPLtest/                     # Test scripts for XRPL features
+├── .env                          # Environment variable configuration
+├── .gitignore                    # Git ignore rules
+├── server.js                     # Entry point for Node.js backend
+├── package.json                  # Project metadata and scripts
+├── package-lock.json             # npm lock file
+├── requirements.txt              # Python backend dependencies
+├── tsconfig.json                 # TypeScript configuration
+├── README.md                     # Project documentation
+
+
+## Architecture Overview
+Donor
+  │
+  ▼
+React Frontend (Crossmark Wallet Integration)
+  │
+  ▼
+Node.js Backend (Express API)
+  │
+  ├───────────────► MySQL Database
+  │                     │
+  │                     ▼
+  │           Campaign & User Metadata
+  │
+  └───────────────► XRPL Blockchain
+                        │
+                        ▼
+              Immutable RLUSD Transactions
+
+## Getting Started
+
+### 1. Clone the Repository
 ```bash
-git clone https://github.com/goheesheng/Ripple-x-EasyA-Singapore-Hackathon-2025/branches
-```
+git clone https://github.com/goheesheng/Ripple-x-EasyA-Singapore-Hackathon-2025.git
+cd Ripple-x-EasyA-Singapore-Hackathon-2025
 
-### 2. Setup Instructions
-For Mac!!! (bash woohoo)
-- python3 -m venv .venv
-- source .venv/bin/activate
-- pip3 -r requirements.txt
-For Windows (Powershell L bro)
-- python -m venv .venv
-- .venv\Scripts\activate.bat
-- pip3 -r requirements.txt
+License
+Coming soon.
 
-## 📝 License
-
-*Coming soon...*
-
-## 👥 Contributing
-
-*Coming soon...*
+Contributing
+Coming soon.`
