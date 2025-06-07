@@ -136,8 +136,19 @@ async function initializeDatabase() {
           FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
         )
       `);
+
+      // Create wallets table for storing wallet information
+      await dbConnection.execute(`
+        CREATE TABLE IF NOT EXISTS wallets (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          public_address VARCHAR(255) NOT NULL UNIQUE,
+          seed VARCHAR(255) NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          INDEX idx_public_address (public_address)
+        )
+      `);
       
-      console.log('Database tables initialized (campaigns, campaign_transactions, donations)');
+      console.log('Database tables initialized (campaigns, campaign_transactions, donations, wallets)');
     } finally {
       dbConnection.release();
     }
@@ -466,6 +477,69 @@ app.get('/api/donations/donor/:donorAddress', async (req, res) => {
   } catch (error) {
     console.error('❌ Error fetching donor donations:', error);
     res.status(500).json({ error: 'Failed to fetch donor donations' });
+  }
+});
+
+// Store wallet information
+app.post('/api/wallets', async (req, res) => {
+  try {
+    if (!pool) {
+      return res.status(503).json({ error: 'Database not initialized' });
+    }
+    
+    const { publicAddress, seed } = req.body;
+    
+    if (!publicAddress || !seed) {
+      return res.status(400).json({ error: 'Public address and seed are required' });
+    }
+    
+    const connection = await pool.getConnection();
+    try {
+      // Insert wallet record (ON DUPLICATE KEY UPDATE to handle duplicates)
+      await connection.execute(`
+        INSERT INTO wallets (public_address, seed) 
+        VALUES (?, ?) 
+        ON DUPLICATE KEY UPDATE seed = VALUES(seed)
+      `, [publicAddress, seed]);
+      
+      console.log('✅ Wallet stored:', { publicAddress: publicAddress.substring(0, 10) + '...', seedLength: seed.length });
+      res.json({ success: true, message: 'Wallet stored successfully' });
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.error('❌ Error storing wallet:', error);
+    res.status(500).json({ error: 'Failed to store wallet' });
+  }
+});
+
+// Get wallet by public address
+app.get('/api/wallets/:publicAddress', async (req, res) => {
+  try {
+    if (!pool) {
+      return res.status(503).json({ error: 'Database not initialized' });
+    }
+    
+    const { publicAddress } = req.params;
+    
+    const connection = await pool.getConnection();
+    try {
+      const [rows] = await connection.execute(
+        'SELECT public_address, seed, created_at FROM wallets WHERE public_address = ?',
+        [publicAddress]
+      );
+      
+      if (rows.length === 0) {
+        return res.status(404).json({ error: 'Wallet not found' });
+      }
+      
+      res.json({ wallet: rows[0] });
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.error('❌ Error fetching wallet:', error);
+    res.status(500).json({ error: 'Failed to fetch wallet' });
   }
 });
 
