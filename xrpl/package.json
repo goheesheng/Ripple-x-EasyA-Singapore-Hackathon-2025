@@ -1,0 +1,19 @@
+{
+    "name": "xrpl-local",
+    "version": "1.0.0",
+    "description": "Local XRPL scripts",
+    "main": "create_amm_pool.js",
+    "scripts": {
+      "dev": "ts-node create_amm_pool.ts",
+      "build": "tsc",
+      "start": "node create_amm_pool.js"
+    },
+    "dependencies": {
+      "xrpl": "^2.14.0"
+    },
+    "devDependencies": {
+      "@types/node": "^20.11.0",
+      "ts-node": "^10.9.2",
+      "typescript": "^5.3.3"
+    }
+  }
