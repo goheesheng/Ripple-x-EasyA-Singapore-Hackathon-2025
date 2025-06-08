@@ -1,6 +1,6 @@
-# Ripple-Based Verified Donation Platform
+# DonorSpark: On-Chain Charities without the hassles
 
-A decentralized donation platform built on the XRP Ledger (XRPL), utilizing RLUSD for stable-value transactions. The system integrates Fractal ID for Know Your Customer (KYC) verification and Decentralized Identifiers (DIDs) for on-chain identity management. It is designed to support fiat off-ramping, enabling traditional charities to securely and transparently receive donations.
+A decentralized donation platform built on the XRP Ledger (XRPL), utilizing RLUSD & XSGD stablecoins for store-of-value and transactions. Its close integration with StraitsX will allow organisations to easily off-ramp the stablecoins earned from their campaigns with no additional on chain transactions or actions, making it extremely normie friendly. We also give the oppurtunity for users to generate an on-chain accounting tax report for them to obtain the necessary tax-write off from applicable charities 
 
 ---
 
