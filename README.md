@@ -30,12 +30,12 @@ A decentralized donation platform built on the XRP Ledger (XRPL), utilizing RLUS
 
 ## Features
 
-- Identity verification using Fractal ID
-- DID generation and on-chain storage via XRPL
+- On-chain storage via XRPL
 - RLUSD-based donation mechanism
 - On-chain transparency of donation flows
 - Planned dashboard for charities 
-- Payout receipts for donors to be able to view tax reliefs
+- Generation of Tax report for donors to be able to view tax write-off
+- Simulated easy off-ramping for organizations completed campaigns 
 
 ---
 
@@ -58,6 +58,7 @@ A decentralized donation platform built on the XRP Ledger (XRPL), utilizing RLUS
 ---
 
 ## Project Structure
+```bash
 RIPPLE-X-EASYA-SINGAPORE-HACKATHON-2025-1
 ├── Frontend/
 │   └── DonorSpark/               # React frontend application
@@ -74,9 +75,10 @@ RIPPLE-X-EASYA-SINGAPORE-HACKATHON-2025-1
 ├── requirements.txt              # Python backend dependencies
 ├── tsconfig.json                 # TypeScript configuration
 ├── README.md                     # Project documentation
-
+```
 
 ## Architecture Overview
+```bash
 Donor
   │
   ▼
@@ -94,6 +96,7 @@ Node.js Backend (Express API)
                         │
                         ▼
               Immutable RLUSD Transactions
+```
 
 ## Dapp Deployer Block Explorer URL
 ```bash
