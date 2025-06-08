@@ -2,6 +2,7 @@
 
 A decentralized donation platform built on the XRP Ledger (XRPL), utilizing RLUSD & XSGD stablecoins for store-of-value and transactions. Its close integration with StraitsX will allow organisations to easily off-ramp the stablecoins earned from their campaigns with no additional on chain transactions or actions, making it extremely normie friendly. We also give the oppurtunity for users to generate an on-chain accounting tax report for them to obtain the necessary tax-write off from applicable charities 
 
+[Download and watch demo video](video.mp4)
 ---
 
 ## Tech Stack
