@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Calendar, Users } from 'lucide-react';
+import { ArrowRight, Calendar, Users, Wallet } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import DonationModal from './DonationModal';
 import { getCurrentUser, isOrganization } from '../services/auth';
 import { Campaign, getCampaigns, getCampaignsByOrganization, getCampaignsByDonor, updateCampaignAmount, getCampaignById } from '../services/campaigns';
@@ -12,6 +13,7 @@ interface CampaignListProps {
 }
 
 export default function CampaignList({ showOnlyMyCampaigns, showOnlyMyDonations }: CampaignListProps) {
+  const navigate = useNavigate();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -186,15 +188,30 @@ export default function CampaignList({ showOnlyMyCampaigns, showOnlyMyDonations 
                     <span className="text-indigo-600 font-bold">${campaign.currentAmount.toLocaleString()}</span>
                     <span className="text-sm"> raised of ${campaign.targetAmount.toLocaleString()}</span>
                   </div>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center"
-                    onClick={() => handleDonateClick(campaign)}
-                  >
-                    Donate
-                    <ArrowRight className="ml-2 w-4 h-4" />
-                  </motion.button>
+                  {showOnlyMyCampaigns && isOrganization() ? (
+                    <div className="flex space-x-2">
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center"
+                        onClick={() => navigate(`/withdraw/${campaign.id}`)}
+                        disabled={campaign.currentAmount <= 0}
+                      >
+                        <Wallet className="mr-2 w-4 h-4" />
+                        Withdraw
+                      </motion.button>
+                    </div>
+                  ) : (
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center"
+                      onClick={() => handleDonateClick(campaign)}
+                    >
+                      Donate
+                      <ArrowRight className="ml-2 w-4 h-4" />
+                    </motion.button>
+                  )}
                 </div>
               </div>
             </motion.div>

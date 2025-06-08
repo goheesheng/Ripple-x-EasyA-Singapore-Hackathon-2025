@@ -14,6 +14,8 @@ import CreateCampaign from './components/CreateCampaign';
 import CampaignList from './components/CampaignList';
 import { signInWithCrossmark, isOrganization, getCurrentUser } from './services/auth';
 import AccountSummary from './components/AccountSummary';
+import CampaignWithdrawal from './components/CampaignWithdrawal';
+import OfframpPage from './components/OfframpPage';
 
 // Impact statistics
 const impactStats = [
@@ -125,6 +127,8 @@ export function App() {
         <Route path="/my-campaigns" element={<CampaignList showOnlyMyCampaigns />} />
         <Route path="/my-donations" element={<CampaignList showOnlyMyDonations />} />
         <Route path="/account-summary" element={<AccountSummary />} />
+        <Route path="/withdraw/:campaignId" element={<CampaignWithdrawal />} />
+        <Route path="/offramp/:campaignId" element={<OfframpPage />} />
         <Route path="/" element={
           <>
             {/* Hero Section */}

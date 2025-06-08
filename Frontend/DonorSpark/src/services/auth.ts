@@ -5,6 +5,7 @@ import { User, Donor, Organization } from '../types';
 // Whitelist of addresses that are allowed to be organizations
 const ORGANIZATION_WHITELIST = [
   'rLt7p9bm8pkKoUAYDksD8RG1R7PxbzMC6z', // Organization wallet
+  'rUeUuomy1NfZqX5o9xexEhzd9vgb1qCkJD', // Additional organization wallet
   // Add more whitelisted addresses here
 ];
 
@@ -94,9 +95,16 @@ export const signOut = async (): Promise<void> => {
 
 // Get current user
 export const getCurrentUser = (): User | null => {
-  const userStr = localStorage.getItem('user');
-  if (!userStr) return null;
-  return JSON.parse(userStr);
+  try {
+    const userStr = localStorage.getItem('user');
+    if (!userStr) return null;
+    return JSON.parse(userStr);
+  } catch (error) {
+    console.error('Error parsing user data from localStorage:', error);
+    // Clear corrupted data
+    localStorage.removeItem('user');
+    return null;
+  }
 };
 
 // Check if user is authenticated
