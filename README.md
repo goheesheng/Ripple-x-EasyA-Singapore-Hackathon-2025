@@ -95,15 +95,27 @@ Node.js Backend (Express API)
                         ▼
               Immutable RLUSD Transactions
 
+## Dapp Deployer Block Explorer URL
+```bash
+https://testnet.xrpl.org/accounts/raPeFkekHdpKkSEavQfu7C8iQstFX9EtDA
+```
+
 ## Getting Started
 
 ### 1. Clone the Repository
 ```bash
 git clone https://github.com/goheesheng/Ripple-x-EasyA-Singapore-Hackathon-2025.git
 cd Ripple-x-EasyA-Singapore-Hackathon-2025
+```
+### 2. Install Packages & Launch Servers
+```bash
+cd frontend
+cd DonorSpark
+npm i
+npm run dev:full
+```
+### 3. Navigate to Web Page
+```bash
+localhost:5173
+```
 
-License
-Coming soon.
-
-Contributing
-Coming soon.`
